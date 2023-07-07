@@ -2,6 +2,7 @@ from mysql.connector import connect, Error
 from config import MYSQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import json
 
 
 def insert(query):
@@ -42,6 +43,7 @@ def select(query):
 
 def create_projects(args: dict):
     args['date'] = datetime.today().strftime(('%Y-%m-%d'))
+    args['proj_owner'] = 'Ilusha Tester'
 
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Project` 
@@ -55,6 +57,7 @@ def create_projects(args: dict):
 
 def create_task(args: dict):
     args['create_date'] = datetime.today().strftime(('%Y-%m-%d'))
+    args['owner'] = 'Ilusha Tester'
 
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Task` 
@@ -68,6 +71,7 @@ def create_task(args: dict):
 
 def comment(args: dict):
     args['date'] = datetime.today().strftime(('%Y-%m-%d'))
+    args['login'] = 'Ilusha Tester'
 
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Comments` 
@@ -94,6 +98,21 @@ def user(args: dict):
 
     return {'messege': "ok"}, 200
 
-user({'login':"best_of_the", 'password':"123456"})
+
+def get_projects():
+    query_select = '''
+    SELECT name, owner 
+    FROM Project
+    '''
+    table_keys = ['name', 'owner']
+
+    data_to_show = select(query_select)
+    select_list = []
+    for i in data_to_show:
+        dict_to_append = dict(zip(table_keys, i))
+        select_list.append(dict_to_append)
+
+    projects = {'projects':select_list}
+    return json.dumps(projects), 200
 
 

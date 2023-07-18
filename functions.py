@@ -101,18 +101,31 @@ def user(args: dict):
 
 def get_projects():
     query_select = '''
-    SELECT name, owner 
-    FROM Project
+    SELECT Project.project_name, Project.is_favorites, 
+    COUNT(Task.project_name) 
+    FROM `Project` JOIN Task ON Project.project_name = Task.project_name 
+    WHERE Task.project_name = 'testing' 
+    GROUP BY 
+    Project.project_name, Project.is_favorites
     '''
-    table_keys = ['name', 'owner']
+    table_keys = ['project_name', 'is_favorites', 'task_count']
 
     data_to_show = select(query_select)
-    select_list = []
+    send_list = []
     for i in data_to_show:
         dict_to_append = dict(zip(table_keys, i))
-        select_list.append(dict_to_append)
+        send_list.append(dict_to_append)
 
-    projects = {'projects':select_list}
+    projects = {'projects':send_list}
     return json.dumps(projects), 200
 
-
+{
+    "projects": 
+    [
+        {
+        "project_name": "testing", 
+        "is_favorites": "0", 
+        "task_count": 2
+        }
+    ]
+}

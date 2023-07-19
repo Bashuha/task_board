@@ -3,6 +3,7 @@ from flask_restful import Api, reqparse, Resource
 from flask.wrappers import Request
 from functions  import *
 from config import API
+from flask_cors import CORS
 
 class AnyJsonRequest(Request):
     def on_json_loading_failed(self, e):
@@ -21,8 +22,10 @@ class _Resource(Resource):
 
 
 app = Flask(__name__)
-api = Api(app, prefix='')
+CORS(app, supports_credentials=True)
+api = Api(app, prefix='/to_do_list')
 app.request_class = AnyJsonRequest
+
 
 class ParseBool():
     def __new__(cls, x: str) -> bool:

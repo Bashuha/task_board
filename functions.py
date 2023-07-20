@@ -42,6 +42,7 @@ def select(query):
 
 
 def create_projects(args: dict) -> tuple:
+    args['owner'] = 'Ilusha'
     args['date'] = datetime.today().strftime(('%Y-%m-%d'))
 
     args['is_favorites'] = 0 if not args['is_favorites'] else 1
@@ -117,15 +118,15 @@ def user(args: dict):
 
 def get_projects() -> tuple:
     query_select = '''
-    SELECT Project.name, Project.is_favorites, COUNT(Task.id) 
+    SELECT Project.name, Project.is_favorites, Project.id, COUNT(Task.id) 
     FROM `Project` 
     LEFT JOIN Task 
     ON 
     Project.id = Task.project_id 
     GROUP BY
-    Project.name, Project.is_favorites
+    Project.name, Project.is_favorites, Project.id
     '''
-    table_keys = ['project_name', 'is_favorites', 'task_count']
+    table_keys = ['project_name', 'is_favorites', 'task_count', 'id',]
 
     data_to_show = select(query_select)
     send_list = []

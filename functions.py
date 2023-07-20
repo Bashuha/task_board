@@ -41,6 +41,24 @@ def update(query):
         connection.close()
 
 
+def delete(query):
+    try:
+        connection = connect(
+            host = MYSQL.get('host'),
+            user = MYSQL.get('user'),
+            password = MYSQL.get('password'),
+            database = MYSQL.get('database')
+        )
+        cursor = connection.cursor()
+        cursor.execute(query)
+        connection.commit()
+    except Error as e:
+        print(e)
+    finally:
+        cursor.close()
+        connection.close()
+
+
 def select(query):
     try:
         with connect(
@@ -66,8 +84,8 @@ def create_projects(args: dict) -> tuple:
     values = tuple(args.values())
     query_insert = f'''
     INSERT INTO `Project` 
-    {tuple(args)} VALUES '''
-
+    {tuple(args)} VALUES 
+    '''
     query_insert = query_insert.replace("'", "") + str(values)    
     insert(query_insert)
 
@@ -147,19 +165,15 @@ def get_projects() -> tuple:
 
     data_to_show = select(query_select)
     send_list = []
-    for i in data_to_show:
-        i = list(i)
-        # if i[1] == 0:
-        #     i[1] = False
-        # else:
-        #     i[1] = True
-
-        match i[1]:
+    for el in data_to_show:
+        el = list(el)
+        match el[1]:
             case 0:
-                i[1] = False
+                el[1] = False
             case 1:
-                i[1] = True
-        dict_to_append = dict(zip(table_keys, i))
+                el[1] = True
+
+        dict_to_append = dict(zip(table_keys, el))
         send_list.append(dict_to_append)
 
     projects = {'projects':send_list}
@@ -170,15 +184,30 @@ def archive_project(args: dict) -> tuple:
     match args['is_archive']:
         case False:
             args['is_archive'] = 0
+            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]} WHERE id = {args["id"]}'
+            update(query_update)
+
+            return {'messege': "project moved from archive"}, 200
+        
         case True:
             args['is_archive'] = 1
+            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]}, is_favorites = 0 WHERE id = {args["id"]}'
+            update(query_update)
 
-    query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]} WHERE id = {args["id"]}'
+            return {'messege': "project moved to the archive"}, 200
 
-    update(query_update)
+    
 
-    return {'messege': "status updated"}, 200
-
+def delete_from_archive(args: dict) -> tuple:
+    query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {args["id"]}'    
+    query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {args["id"]}'
+    check_status = select(query_select)
+    match check_status:
+        case []:
+            return {"messege": "the project is not archived"}, 400
+        case _:
+            delete(query_delete)
+            return {'messege': "project deleted"}, 200
 
 
 

@@ -23,6 +23,24 @@ def insert(query):
         connection.close()
 
 
+def update(query):
+    try:
+        connection = connect(
+            host = MYSQL.get('host'),
+            user = MYSQL.get('user'),
+            password = MYSQL.get('password'),
+            database = MYSQL.get('database')
+        )
+        cursor = connection.cursor()
+        cursor.execute(query)
+        connection.commit()
+    except Error as e:
+        print(e)
+    finally:
+        cursor.close()
+        connection.close()
+
+
 def select(query):
     try:
         with connect(
@@ -42,7 +60,6 @@ def select(query):
 
 
 def create_projects(args: dict) -> tuple:
-    args['owner'] = 'Ilusha'
     args['date'] = datetime.today().strftime(('%Y-%m-%d'))
 
     args['is_favorites'] = 0 if not args['is_favorites'] else 1
@@ -118,29 +135,51 @@ def user(args: dict):
 
 def get_projects() -> tuple:
     query_select = '''
-    SELECT Project.name, Project.is_favorites, Project.id, COUNT(Task.id) 
+    SELECT Project.name, Project.is_favorites, Project.id, Project.is_archive, COUNT(Task.id) 
     FROM `Project` 
     LEFT JOIN Task 
     ON 
     Project.id = Task.project_id 
     GROUP BY
-    Project.name, Project.is_favorites, Project.id
+    Project.name, Project.is_favorites, Project.id, Project.is_archive
     '''
-    table_keys = ['project_name', 'is_favorites', 'id', 'task_count']
+    table_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count']
 
     data_to_show = select(query_select)
     send_list = []
     for i in data_to_show:
         i = list(i)
-        if i[1] == 0:
-            i[1] = False
-        else:
-            i[1] = True
+        # if i[1] == 0:
+        #     i[1] = False
+        # else:
+        #     i[1] = True
+
+        match i[1]:
+            case 0:
+                i[1] = False
+            case 1:
+                i[1] = True
         dict_to_append = dict(zip(table_keys, i))
         send_list.append(dict_to_append)
 
     projects = {'projects':send_list}
     return projects, 200
+
+def archive_project(args: dict) -> tuple:
+    
+    match args['is_archive']:
+        case False:
+            args['is_archive'] = 0
+        case True:
+            args['is_archive'] = 1
+
+    query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]} WHERE id = {args["id"]}'
+
+    update(query_update)
+
+    return {'messege': "status updated"}, 200
+
+
 
 
 {

@@ -42,6 +42,8 @@ class Project(_Resource):
     parser = reqparse.RequestParser(trim=True)
     parser.add_argument('name', type=str)
     parser.add_argument('is_favorites', type=ParseBool)
+    parser.add_argument('is_archive', type=ParseBool)
+    parser.add_argument('id', type=int)
 
 
     def get(self):
@@ -53,6 +55,9 @@ class Project(_Resource):
         args: dict = self.parser.parse_args()
         return self.return_json(*create_projects(args))
 
+    def put(self):
+        args: dict = self.parser.parse_args()
+        return self.return_json(*archive_project(args))
 
 api.add_resource(Project, '/projects')
 

@@ -28,7 +28,9 @@ app.request_class = AnyJsonRequest
 
 
 class ParseBool():
-    def __new__(cls, x: str) -> bool:
+    def __new__(cls, x: str | bool) -> bool:
+        if isinstance(x, bool):
+            return x
         if x.lower() == 'true':
             return True
         return False

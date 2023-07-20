@@ -126,7 +126,7 @@ def get_projects() -> tuple:
     GROUP BY
     Project.name, Project.is_favorites, Project.id
     '''
-    table_keys = ['project_name', 'is_favorites', 'task_count', 'id',]
+    table_keys = ['project_name', 'is_favorites', 'id', 'task_count']
 
     data_to_show = select(query_select)
     send_list = []

@@ -87,7 +87,7 @@ def create_projects(args: dict) -> tuple:
     {tuple(args)} VALUES 
     '''
     query_insert = query_insert.replace("'", "") + str(values)    
-    insert(query_insert)
+    insert(query_insert) 
 
     return {'messege': "ok"}, 200
 

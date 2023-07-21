@@ -38,10 +38,12 @@ class ParseBool():
 
 
 class Project(_Resource):
-    """Загрузить данные из файла и отправка их в верном формате в таблицу (на фронт)"""
+
     parser = reqparse.RequestParser(trim=True)
     parser.add_argument('name', type=str)
     parser.add_argument('is_favorites', type=ParseBool)
+    parser.add_argument('is_archive', type=ParseBool)
+    parser.add_argument('id', type=int)
 
 
     def get(self):
@@ -52,8 +54,31 @@ class Project(_Resource):
     def post(self):
         args: dict = self.parser.parse_args()
         return self.return_json(*create_projects(args))
+    
+
+    def put(self):
+        args: dict = self.parser.parse_args()
+        return self.return_json(*archive_project(args))
+    
+    
+    def delete(self):
+        args: dict = self.parser.parse_args()
+        return self.return_json(*delete_from_archive(args))
+    
+
+class Tasks(_Resource):
+    
+    parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('name', type=str)
+    parser.add_argument('description', type=str)
+    
+
+    def post(self):
+        args: dict = self.parser.parse_args()
+        return self.return_json(*create_task(args))
 
 
+api.add_resource(Tasks, '/tasks')
 api.add_resource(Project, '/projects')
 
 

@@ -121,6 +121,27 @@ def create_task(args: dict):
     return {'messege': "ok"}, 200
 
 
+def get_tasks(args: dict) -> tuple:
+    query_select = 'SELECT '
+    'name, description, owner, project_id, create_date '
+    'FROM `Task`' 
+    f'WHERE project_id = {args["project_id"]}'
+
+    project_data_select = ''
+    
+    table_keys = ['name', 'description', 'owner', 'project_id', 'create_date']
+    data_to_show = select(query_select)
+    send_list = []
+    for el in data_to_show:
+        dict_to_append = dict(zip(table_keys, el))
+        dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
+        send_list.append(dict_to_append)
+
+    tasks = {'tasks':send_list}
+    return tasks, 200
+
+
+
 def comment(args: dict):
     args['date'] = datetime.today().strftime(('%Y-%m-%d'))
     args['login'] = 'Ilusha Tester'
@@ -133,6 +154,7 @@ def comment(args: dict):
     insert(query_insert)
 
     return {'messege': "ok"}, 200
+
 
 
 def user(args: dict):
@@ -167,23 +189,16 @@ def get_projects() -> tuple:
     send_list = []
     for el in data_to_show:
         el = list(el)
-        match el[1]:
-            case 0:
-                el[1] = False
-            case 1:
-                el[1] = True
+        el[1] = bool(el[1])
 
-        match el[-2]:
-            case 0:
-                el[-2] = False
-            case 1:
-                el[-2] = True
+        el[-2] = bool(el[-2])
 
         dict_to_append = dict(zip(table_keys, el))
         send_list.append(dict_to_append)
 
     projects = {'projects':send_list}
     return projects, 200
+
 
 def archive_project(args: dict) -> tuple:
     

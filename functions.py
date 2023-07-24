@@ -133,9 +133,8 @@ def get_tasks(args: dict) -> tuple:
     data_to_show = select(query_select)
     send_list = []
     for el in data_to_show:
-        el = list(el)
-        el[-1] = el[-1].strftime(('%Y-%m-%d'))
         dict_to_append = dict(zip(table_keys, el))
+        dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
         send_list.append(dict_to_append)
 
     tasks = {'tasks':send_list}

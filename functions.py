@@ -122,24 +122,24 @@ def create_task(args: dict):
 
 
 def get_tasks(args: dict) -> tuple:
-    query_select = 'SELECT '
-    'name, description, owner, project_id, create_date '
-    'FROM `Task`' 
-    f'WHERE project_id = {args["project_id"]}'
+    query_select = f'''
+    SELECT Project.name, Task.project_id, Task.name, Task.description, Task.owner, Task.create_date 
+    FROM `Task` 
+    JOIN Project 
+    ON Project.id = Task.project_id 
+    WHERE project_id = {args["project_id"]}
+    '''
 
-    project_data_select = ''
-    
-    table_keys = ['name', 'description', 'owner', 'project_id', 'create_date']
+    table_keys = ['name', 'description', 'owner', 'create_date']
     data_to_show = select(query_select)
     send_list = []
-    for el in data_to_show:
-        dict_to_append = dict(zip(table_keys, el))
+    for task in data_to_show:
+        dict_to_append = dict(zip(table_keys, task[2:]))
         dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
         send_list.append(dict_to_append)
 
-    tasks = {'tasks':send_list}
-    return tasks, 200
-
+    tasks_in_project = {'project_name':f'{data_to_show[0][0]}', 'project_id':f'{data_to_show[0][1]}','tasks':send_list}
+    return tasks_in_project, 200
 
 
 def comment(args: dict):
@@ -205,14 +205,14 @@ def archive_project(args: dict) -> tuple:
     match args['is_archive']:
         case False:
             args['is_archive'] = 0
-            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]} WHERE id = {args["id"]}'
+            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]} WHERE id = {args["project_id"]}'
             update(query_update)
 
             return {'messege': "project moved from archive"}, 200
         
         case True:
             args['is_archive'] = 1
-            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]}, is_favorites = 0 WHERE id = {args["id"]}'
+            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]}, is_favorites = 0 WHERE id = {args["project_id"]}'
             update(query_update)
 
             return {'messege': "project moved to the archive"}, 200
@@ -220,8 +220,8 @@ def archive_project(args: dict) -> tuple:
     
 
 def delete_from_archive(args: dict) -> tuple:
-    query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {args["id"]}'    
-    query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {args["id"]}'
+    query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {args["project_id"]}'    
+    query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {args["project_id"]}'
     check_status = select(query_select)
     match check_status:
         case []:

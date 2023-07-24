@@ -43,7 +43,7 @@ class Project(_Resource):
     parser.add_argument('name', type=str)
     parser.add_argument('is_favorites', type=ParseBool)
     parser.add_argument('is_archive', type=ParseBool)
-    parser.add_argument('id', type=int)
+    parser.add_argument('project_id', type=int)
 
 
     def get(self):
@@ -71,8 +71,15 @@ class Tasks(_Resource):
     parser = reqparse.RequestParser(trim=True)
     parser.add_argument('name', type=str)
     parser.add_argument('description', type=str)
-    
+    parser.add_argument('project_id', type=str)
 
+
+    def get(self):
+        args: dict = self.parser.parse_args()
+        body, status = get_tasks(args)
+        return self.return_json(body, status)
+    
+    
     def post(self):
         args: dict = self.parser.parse_args()
         return self.return_json(*create_task(args))

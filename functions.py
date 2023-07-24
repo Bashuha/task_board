@@ -173,6 +173,12 @@ def get_projects() -> tuple:
             case 1:
                 el[1] = True
 
+        match el[-2]:
+            case 0:
+                el[-2] = False
+            case 1:
+                el[-2] = True
+
         dict_to_append = dict(zip(table_keys, el))
         send_list.append(dict_to_append)
 

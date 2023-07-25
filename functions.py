@@ -110,7 +110,10 @@ def project_list(user='Ilusha'):
 def create_task(args: dict):
     args['create_date'] = datetime.today().strftime(('%Y-%m-%d'))
     args['owner'] = 'Ilusha Tester'
-
+    
+    if not args['project_id']: 
+        args.pop('project_id')
+    
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Task` 
     {tuple(args)} VALUES '''
@@ -122,24 +125,38 @@ def create_task(args: dict):
 
 
 def get_tasks(args: dict) -> tuple:
-    query_select = 'SELECT '
-    'name, description, owner, project_id, create_date '
-    'FROM `Task`' 
-    f'WHERE project_id = {args["project_id"]}'
+    query_select = f'''
+    SELECT Project.name, Task.project_id, Task.name, Task.description, Task.owner, Task.create_date 
+    FROM `Task` 
+    JOIN Project 
+    ON Project.id = Task.project_id 
+    WHERE project_id = {args["project_id"]}
+    '''
 
-    project_data_select = ''
+    select_incoming = '''SELECT name, description, owner, create_date 
+    FROM `Task` WHERE project_id IS NULL''' 
+
+    table_keys = ['name', 'description', 'owner', 'create_date']
+    if args['project_id']:
+        data_to_show = select(query_select)
+    else:
+        data_to_show = select(select_incoming)
     
-    table_keys = ['name', 'description', 'owner', 'project_id', 'create_date']
-    data_to_show = select(query_select)
     send_list = []
-    for el in data_to_show:
-        dict_to_append = dict(zip(table_keys, el))
+    for task in data_to_show:
+        if args['project_id']:
+            dict_to_append = dict(zip(table_keys, task[2:]))
+        else:
+            dict_to_append = dict(zip(table_keys, task))
         dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
         send_list.append(dict_to_append)
 
-    tasks = {'tasks':send_list}
-    return tasks, 200
+    if args['project_id']:
+        tasks_in_project = {'project_name':{data_to_show[0][0]}, 'project_id':{data_to_show[0][1]},'tasks':send_list}
+    else:
+        tasks_in_project = {'tasks': send_list}
 
+    return tasks_in_project, 200
 
 
 def comment(args: dict):
@@ -205,14 +222,14 @@ def archive_project(args: dict) -> tuple:
     match args['is_archive']:
         case False:
             args['is_archive'] = 0
-            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]} WHERE id = {args["id"]}'
+            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]} WHERE id = {args["project_id"]}'
             update(query_update)
 
             return {'messege': "project moved from archive"}, 200
         
         case True:
             args['is_archive'] = 1
-            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]}, is_favorites = 0 WHERE id = {args["id"]}'
+            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]}, is_favorites = 0 WHERE id = {args["project_id"]}'
             update(query_update)
 
             return {'messege': "project moved to the archive"}, 200
@@ -220,8 +237,8 @@ def archive_project(args: dict) -> tuple:
     
 
 def delete_from_archive(args: dict) -> tuple:
-    query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {args["id"]}'    
-    query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {args["id"]}'
+    query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {args["project_id"]}'    
+    query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {args["project_id"]}'
     check_status = select(query_select)
     match check_status:
         case []:
@@ -231,16 +248,3 @@ def delete_from_archive(args: dict) -> tuple:
             return {'messege': "project deleted"}, 200
 
 
-
-{
-    "projects": 
-    [
-        {
-        "project_name": "testing", 
-        "is_favorites": "0", 
-        "task_count": 2
-        }
-    ]
-}
-
-# create_task({'name':'idea', 'description':'empty_field', 'project_id':7})

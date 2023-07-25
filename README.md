@@ -91,6 +91,39 @@
 ```
 Полный пример:
 */to_do_list/tasks?project_id=7*
+* Ответ:
+```json
+{
+    "project_name": "tomatos",
+    "project_id": 7,
+    "tasks": [
+        {
+            "name": "i_have_no_idea",
+            "description": "Nothing",
+            "owner": "Ilusha Tester",
+            "create_date": "2023-07-19"
+        },
+        {
+            "name": "i_have_an_idea",
+            "description": "Smth",
+            "owner": "Ilusha Tester",
+            "create_date": "2023-07-19"
+        },
+        {
+            "name": "idea",
+            "description": "empty_field",
+            "owner": "Ilusha Tester",
+            "create_date": "2023-07-19"
+        },
+        {
+            "name": "I like kelvin",
+            "description": "God bless kelvin",
+            "owner": "Ilusha Tester",
+            "create_date": "2023-07-25"
+        }
+            ]
+}
+```
 
 - Если не передавать параметр, то вернется список **входящих** задач
 ```json
@@ -129,3 +162,37 @@
     "messege": "ok"
 }
 ```
+
+## Получить комментарии к задаче
+*GET /to_do_list/comments*
+
+* Параментры получения комментариев:
+```json
+{
+    "task_id":35
+}
+```
+- Ответ:
+```json
+{
+    "task_id": "35",
+    "comments": [
+        {
+            "login": "Ilusha Tester",
+            "create_at": "2023-06-30",
+            "text": "you can do this"
+        },
+        {
+            "login": "Ilusha Tester",
+            "create_at": "2023-06-30",
+            "text": "Just do it!"
+        },
+        {
+            "login": "Ilusha Tester",
+            "create_at": "2023-06-30",
+            "text": "Artem, kelvin waits for you"
+        }
+    ]
+}
+```
+

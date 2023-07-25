@@ -152,11 +152,11 @@ def get_tasks(args: dict) -> tuple:
         send_list.append(dict_to_append)
 
     if args['project_id']:
-        tasks_in_project = {'project_name':data_to_show[0][0], 'project_id':data_to_show[0][1],'tasks':send_list}
+        tasks_list = {'project_name':data_to_show[0][0], 'project_id':data_to_show[0][1],'tasks':send_list}
     else:
-        tasks_in_project = {'tasks': send_list}
+        tasks_list = {'tasks': send_list}
 
-    return tasks_in_project, 200
+    return tasks_list, 200
 
 
 def comment(args: dict):
@@ -173,12 +173,24 @@ def comment(args: dict):
     return {'messege': "ok"}, 200
 
 
-def get_comments(args):
-    args['date'] = datetime.today().strftime(('%Y-%m-%d'))
+def get_comments(args: dict) -> tuple:
     args['login'] = 'Ilusha Tester'
 
-    query_select = '''SELECT task_id, login, create_add, text 
-    FROM Comments WHERE task_id = 35'''
+    query_select = f'''SELECT task_id, login, create_at, text 
+    FROM Comments WHERE task_id = {args['task_id']}'''
+
+    table_keys = ['login', 'create_at', 'text']
+    data_to_show = select(query_select)
+    
+    comment_list = []
+    for comment in data_to_show:
+        dict_to_append = dict(zip(table_keys, comment[1:]))
+        dict_to_append['create_at'] = dict_to_append['create_at'].strftime(('%Y-%m-%d'))
+        comment_list.append(dict_to_append)
+
+    comments_to_send = {'task_id':args['task_id'], 'comments':comment_list}
+
+    return comments_to_send, 200
 
 
 

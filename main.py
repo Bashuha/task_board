@@ -85,9 +85,20 @@ class Tasks(_Resource):
         return self.return_json(*create_task(args))
 
 
+class Comments(_Resource):
+
+    parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('task_id', type=str)
+
+    def get(self):
+        args: dict = self.parser.parse_args()
+        body, status = get_comments(args)
+        return self.return_json(body, status)    
+
+
 api.add_resource(Tasks, '/tasks')
 api.add_resource(Project, '/projects')
-
+api.add_resource(Comments, '/comments')
 
 
 if __name__ == '__main__':

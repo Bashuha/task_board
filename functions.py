@@ -152,7 +152,7 @@ def get_tasks(args: dict) -> tuple:
         send_list.append(dict_to_append)
 
     if args['project_id']:
-        tasks_in_project = {'project_name':f'{data_to_show[0][0]}', 'project_id':f'{data_to_show[0][1]}','tasks':send_list}
+        tasks_in_project = {'project_name':{data_to_show[0][0]}, 'project_id':{data_to_show[0][1]},'tasks':send_list}
     else:
         tasks_in_project = {'tasks': send_list}
 
@@ -248,16 +248,3 @@ def delete_from_archive(args: dict) -> tuple:
             return {'messege': "project deleted"}, 200
 
 
-
-{
-    "projects": 
-    [
-        {
-        "project_name": "testing", 
-        "is_favorites": "0", 
-        "task_count": 2
-        }
-    ]
-}
-
-# create_task({'name':'idea', 'description':'empty_field', 'project_id':7})

@@ -13,7 +13,7 @@
 *GET /to_do_list/projects*
 
 - Ответ, статус 200
-```
+```json
 {
     "projects": [
         {
@@ -29,7 +29,7 @@
 ## Создание прокта
 *POST /to_do_list/projects*
 * Тело запроса на **создание** проекта
-```
+```json
 {
     "name":"our_project"
     "is_favorites":"false",
@@ -40,20 +40,20 @@
 *PUT /to_do_list/projects*
 
 - Запрос на **изменение статуса** проекта. ```true``` - в архиве, ```false``` - не в архиве
-```
+```json
 {
     "is_archive":true,
     "project_id":6
 }
 ```
 * Ответ в случае перемещения проекта в архив, статус 200
-```
+```json
 {
     "messege": "project moved to the archive"
 }
 ```
 * Ответ в случае если мы достаем проект из архива, статус 200
-```
+```json
 {
     "messege": "project moved from archive"
 }
@@ -63,19 +63,19 @@
 *DELETE /to_do_list/projects*
 
 * Тело запроса на удаление архивированного проекта
-```
+```json
 {
     "project_id": 14
 }
 ```
 - Ответ в случае успешного удаления, статус 200
-```
+```json
 {
     "messege": "project deleted"
 }
 ```
 - Ответ на случай попытки удалить проект не в архиве, статус 400
-```
+```json
 {
     "messege": "the project is not archived"
 }
@@ -84,14 +84,16 @@
 *GET /to_do_list/tasks*
 
 * Параметр запроса на получение списка задач у нужного проекта
-```
-project_id=7
+```json
+{
+    "project_id":7
+}
 ```
 Полный пример:
 */to_do_list/tasks?project_id=7*
 
 - Если не передавать параметр, то вернется список **входящих** задач
-```
+```json
 {
     "tasks": [
         {
@@ -114,7 +116,7 @@ project_id=7
 *POST /to_do_list/tasks*
 
 * Тело запроса на создание задачи:
-```
+```json
 {
     "name": "task_name",
     "description": "description_text",
@@ -122,7 +124,7 @@ project_id=7
 }
 ```
 - project_id можно не указывать, чтобы создать **входящую** задачу. В обоих случаях ответ будет один:
-```
+```json
 {
     "messege": "ok"
 }

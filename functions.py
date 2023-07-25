@@ -110,7 +110,10 @@ def project_list(user='Ilusha'):
 def create_task(args: dict):
     args['create_date'] = datetime.today().strftime(('%Y-%m-%d'))
     args['owner'] = 'Ilusha Tester'
-
+    
+    if not args['project_id']: 
+        args.pop('project_id')
+    
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Task` 
     {tuple(args)} VALUES '''
@@ -130,15 +133,29 @@ def get_tasks(args: dict) -> tuple:
     WHERE project_id = {args["project_id"]}
     '''
 
+    select_incoming = '''SELECT name, description, owner, create_date 
+    FROM `Task` WHERE project_id IS NULL''' 
+
     table_keys = ['name', 'description', 'owner', 'create_date']
-    data_to_show = select(query_select)
+    if args['project_id']:
+        data_to_show = select(query_select)
+    else:
+        data_to_show = select(select_incoming)
+    
     send_list = []
     for task in data_to_show:
-        dict_to_append = dict(zip(table_keys, task[2:]))
+        if args['project_id']:
+            dict_to_append = dict(zip(table_keys, task[2:]))
+        else:
+            dict_to_append = dict(zip(table_keys, task))
         dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
         send_list.append(dict_to_append)
 
-    tasks_in_project = {'project_name':f'{data_to_show[0][0]}', 'project_id':f'{data_to_show[0][1]}','tasks':send_list}
+    if args['project_id']:
+        tasks_in_project = {'project_name':f'{data_to_show[0][0]}', 'project_id':f'{data_to_show[0][1]}','tasks':send_list}
+    else:
+        tasks_in_project = {'tasks': send_list}
+
     return tasks_in_project, 200
 
 

@@ -152,7 +152,7 @@ def get_tasks(args: dict) -> tuple:
         send_list.append(dict_to_append)
 
     if args['project_id']:
-        tasks_in_project = {'project_name':{data_to_show[0][0]}, 'project_id':{data_to_show[0][1]},'tasks':send_list}
+        tasks_in_project = {'project_name':data_to_show[0][0], 'project_id':data_to_show[0][1],'tasks':send_list}
     else:
         tasks_in_project = {'tasks': send_list}
 
@@ -171,6 +171,14 @@ def comment(args: dict):
     insert(query_insert)
 
     return {'messege': "ok"}, 200
+
+
+def get_comments(args):
+    args['date'] = datetime.today().strftime(('%Y-%m-%d'))
+    args['login'] = 'Ilusha Tester'
+
+    query_select = '''SELECT task_id, login, create_add, text 
+    FROM Comments WHERE task_id = 35'''
 
 
 

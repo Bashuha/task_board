@@ -176,19 +176,42 @@ def comment(args: dict):
 def get_comments(args: dict) -> tuple:
     args['login'] = 'Ilusha Tester'
 
-    query_select = f'''SELECT task_id, login, create_at, text 
-    FROM Comments WHERE task_id = {args['task_id']}'''
+    query_select = f'''SELECT
+    Task.owner,
+    Task.name,
+    Task.description,
+    Task.create_date,
+    Task.project_id,
+    Project.name, 
+    Comments.login,
+    Comments.create_at,
+    Comments.text
+    FROM
+    `Comments`
+    JOIN `Task` ON Comments.task_id = Task.id
+    JOIN Project ON Project.id = Task.project_id
+    WHERE
+    Comments.task_id = {args["task_id"]}'''
 
     table_keys = ['login', 'create_at', 'text']
     data_to_show = select(query_select)
     
     comment_list = []
     for comment in data_to_show:
-        dict_to_append = dict(zip(table_keys, comment[1:]))
+        dict_to_append = dict(zip(table_keys, comment[6:]))
         dict_to_append['create_at'] = dict_to_append['create_at'].strftime(('%Y-%m-%d'))
         comment_list.append(dict_to_append)
 
-    comments_to_send = {'task_id':args['task_id'], 'comments':comment_list}
+    comments_to_send = {'project_name':data_to_show[0][5],
+                        'project_id':data_to_show[0][4],
+                        'task_name':data_to_show[0][1], 
+                        'task_id':args['task_id'], 
+                        'task_owner':data_to_show[0][0], 
+                        'description':data_to_show[0][2], 
+                        'create_date':data_to_show[0][3], 
+                        'comments':comment_list}
+    
+    comments_to_send['create_date'] = comments_to_send['create_date'].strftime(('%Y-%m-%d'))
 
     return comments_to_send, 200
 

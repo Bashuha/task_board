@@ -79,7 +79,9 @@ def select(query):
 
 def create_projects(args: dict) -> tuple:
     args['date'] = datetime.today().strftime(('%Y-%m-%d'))
+    args.pop('project_id')
 
+    args['is_archive'] = 0
     args['is_favorites'] = 0 if not args['is_favorites'] else 1
     values = tuple(args.values())
     query_insert = f'''
@@ -124,39 +126,47 @@ def create_task(args: dict):
     return {'messege': "ok"}, 200
 
 
-def get_tasks(args: dict) -> tuple:
+def get_project_details(args: dict) -> tuple:
+
+    select_project_info = f'''SELECT name, id FROM Project
+    WHERE id = {args['project_id']}'''
+
+    project_data = select(select_project_info)
+
+    if not project_data and args['project_id']:
+        return {'message': 'project not found'}, 404
+
     query_select = f'''
-    SELECT Project.name, Task.project_id, Task.name, Task.description, Task.owner, Task.create_date 
-    FROM `Task` 
-    JOIN Project 
-    ON Project.id = Task.project_id 
-    WHERE project_id = {args["project_id"]}
+    SELECT  
+        name, 
+        description, 
+        owner, 
+        create_date, 
+        id  
+    FROM 
+        `Task` 
+    WHERE 
     '''
 
-    select_incoming = '''SELECT name, description, owner, create_date 
-    FROM `Task` WHERE project_id IS NULL''' 
+    table_keys = ['name', 'description', 'owner', 'create_date', 'task_id']
 
-    table_keys = ['name', 'description', 'owner', 'create_date']
-    if args['project_id']:
-        data_to_show = select(query_select)
-    else:
-        data_to_show = select(select_incoming)
+    final_select = query_select + (f'project_id = {args["project_id"]}' if args["project_id"] else 'project_id IS NULL')
+
+    data_to_show = select(final_select)
     
-    send_list = []
+    task_list = []
     for task in data_to_show:
-        if args['project_id']:
-            dict_to_append = dict(zip(table_keys, task[2:]))
-        else:
-            dict_to_append = dict(zip(table_keys, task))
+        dict_to_append = dict(zip(table_keys, task))
         dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
-        send_list.append(dict_to_append)
+        task_list.append(dict_to_append)
 
+    # делаю через условие, потому что если project_data пустой, то будет ошибка при попытке обратиться по индексу
     if args['project_id']:
-        tasks_in_project = {'project_name':data_to_show[0][0], 'project_id':data_to_show[0][1],'tasks':send_list}
+        final_result = {'project_name': project_data[0][0], 'project_id': args['project_id'], 'tasks': task_list}
     else:
-        tasks_in_project = {'tasks': send_list}
+        final_result = {'project_name': 'Входящие', 'project_id': None, 'tasks': task_list}
 
-    return tasks_in_project, 200
+    return final_result, 200
 
 
 def comment(args: dict):
@@ -173,12 +183,68 @@ def comment(args: dict):
     return {'messege': "ok"}, 200
 
 
-def get_comments(args):
-    args['date'] = datetime.today().strftime(('%Y-%m-%d'))
+def get_task_details(args: dict) -> tuple:
     args['login'] = 'Ilusha Tester'
 
-    query_select = '''SELECT task_id, login, create_add, text 
-    FROM Comments WHERE task_id = 35'''
+    select_tasks = f'SELECT id, project_id FROM Task WHERE id = {args["task_id"]}'
+    check_project_id = select(select_tasks)
+
+    if not check_project_id:
+        return {'message': 'task not found'}, 404
+
+    select_task_info = f'''
+    SELECT 
+        Project.name, 
+        Task.project_id, 
+        Task.name, 
+        Task.id, 
+        Task.owner, 
+        Task.description, 
+        Task.create_date 
+    FROM 
+        `Task` 
+    LEFT JOIN 
+        `Project` 
+    ON 
+        Project.id = Task.project_id 
+    WHERE 
+        Task.id = {args['task_id']}'''
+    
+
+    select_comments = f'''
+    SELECT 
+        login, 
+        create_at, 
+        text,
+        id 
+    FROM 
+        `Comments` 
+    WHERE 
+        Comments.task_id = {args['task_id']}'''
+
+
+    # создаем два списка ключей для дальнейшего преобразования в словари
+    table_keys = ['login', 'create_at', 'text', 'id']
+    
+    project_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date']
+    task_info = select(select_task_info)
+    comments_to_send = dict(zip(project_keys, task_info[0]))
+    
+    # делаем запрос в таблицу для получения комментов и из каждой строки создаем словарь для отправки на фронт
+    # словари в свою очередь добавляем в список comment_list
+    tasks_comments = select(select_comments)
+    comment_list = []
+    for comment in tasks_comments:
+        dict_to_append = dict(zip(table_keys, comment))
+        dict_to_append['create_at'] = dict_to_append['create_at'].strftime(('%Y-%m-%d'))
+        comment_list.append(dict_to_append)
+
+    comments_to_send['comments'] = comment_list
+    comments_to_send['project_name'] = comments_to_send['project_name'] or 'Входящие'
+    
+    comments_to_send['create_date'] = comments_to_send['create_date'].strftime(('%Y-%m-%d'))
+
+    return comments_to_send, 200
 
 
 
@@ -200,13 +266,20 @@ def user(args: dict):
 
 def get_projects() -> tuple:
     query_select = '''
-    SELECT Project.name, Project.is_favorites, Project.id, Project.is_archive, COUNT(Task.id) 
-    FROM `Project` 
-    LEFT JOIN Task 
+    SELECT 
+        Project.name, 
+        Project.is_favorites, 
+        Project.id, 
+        Project.is_archive, 
+        COUNT(Task.id) 
+    FROM 
+        `Project` 
+    LEFT JOIN 
+        `Task` 
     ON 
-    Project.id = Task.project_id 
+        Project.id = Task.project_id 
     GROUP BY
-    Project.name, Project.is_favorites, Project.id, Project.is_archive
+        Project.name, Project.is_favorites, Project.id, Project.is_archive
     '''
     table_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count']
 
@@ -227,6 +300,11 @@ def get_projects() -> tuple:
 
 def archive_project(args: dict) -> tuple:
     
+    check_project = f'SELECT id FROM Project WHERE id = {args["project_id"]}'
+    select_id = select(check_project)
+    if not select_id:
+        return {'message':'project not found'}, 404
+
     match args['is_archive']:
         case False:
             args['is_archive'] = 0

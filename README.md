@@ -23,7 +23,7 @@
             "id": 1,
             "task_count": 0
         }
-                ]
+    ]
 }
 ```
 
@@ -57,6 +57,12 @@
 ```json
 {
     "messege": "project moved from archive"
+}
+```
+* Ответ, если проекта в базе нет
+```json
+{
+    "message": "project not found"
 }
 ```
 
@@ -102,49 +108,80 @@
             "name": "i_have_no_idea",
             "description": "Nothing",
             "owner": "Ilusha Tester",
-            "create_date": "2023-07-19"
+            "create_date": "2023-07-19",
+            "task_id": 2
         },
         {
             "name": "i_have_an_idea",
             "description": "Smth",
             "owner": "Ilusha Tester",
-            "create_date": "2023-07-19"
+            "create_date": "2023-07-19",
+            "task_id": 3
         },
         {
             "name": "idea",
             "description": "empty_field",
             "owner": "Ilusha Tester",
-            "create_date": "2023-07-19"
+            "create_date": "2023-07-19",
+            "task_id": 4
         },
         {
             "name": "I like kelvin",
             "description": "God bless kelvin",
             "owner": "Ilusha Tester",
-            "create_date": "2023-07-25"
+            "create_date": "2023-07-25",
+            "task_id": 45
         }
-            ]
+    ]
 }
 ```
 
 - Если не передавать параметр, то вернется список **входящих** задач
+
+*/to_do_list/tasks*
 ```json
 {
+    "project_name": "Входящие",
+    "project_id": null,
     "tasks": [
         {
             "name": "i like my job",
             "description": "i am ok",
             "owner": "Ilusha Tester",
-            "create_date": "2023-07-19"
+            "create_date": "2023-07-19",
+            "task_id": 39
         },
         {
             "name": "Artem loves kelvin",
             "description": "Can Artem finish kelvin?",
             "owner": "Ilusha Tester",
-            "create_date": "2023-07-25"
+            "create_date": "2023-07-25",
+            "task_id": 40
+        },
+        {
+            "name": "Kelvin loves Artem",
+            "description": "Kelvin > Artem",
+            "owner": "Ilusha Tester",
+            "create_date": "2023-07-25",
+            "task_id": 41
+        },
+        {
+            "name": "Another kelvin",
+            "description": "Artem, pls",
+            "owner": "Ilusha Tester",
+            "create_date": "2023-07-25",
+            "task_id": 44
         }
-            ]
+    ]
 }
 ```
+* Ответ в случае если соответсвующего проекта в базе нет:
+```json
+{
+    "message": "project not found"
+}
+```
+
 
 ## Создать задачу
 *POST /to_do_list/tasks*
@@ -167,7 +204,7 @@
 ## Получить детализацию задачи
 *GET /to_do_list/comments*
 
-* Параментры получения комментариев:
+* Параментры получения детализации:
 ```json
 {
     "task_id":35
@@ -204,4 +241,39 @@
     ]
 }
 ```
+* Если задача не принадлежит ни к одному проекту, то есть находится во **входящих**:
+```json
+{
+    "project_name": "Входящие",
+    "project_id": null,
+    "task_name": "Kelvin loves Artem",
+    "task_id": "41",
+    "task_owner": "Ilusha Tester",
+    "description": "Kelvin > Artem",
+    "create_date": "2023-07-25",
+    "comments": [
+        {
+            "login": "Ilusha Tester",
+            "create_at": "2023-06-30",
+            "text": "Every single one Artem loves kelvin"
+        },
+        {
+            "login": "Ilusha Tester",
+            "create_at": "2023-06-30",
+            "text": "Artem > Kelvin"
+        },
+        {
+            "login": "Ilusha Tester",
+            "create_at": "2023-06-30",
+            "text": "Can we finish Kelvin?"
+        }
+    ]
+}
+```
 
+* И если задача не найдена, статус 404
+```json
+{
+    "message": "task not found"
+}
+```

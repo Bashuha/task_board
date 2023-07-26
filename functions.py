@@ -79,7 +79,9 @@ def select(query):
 
 def create_projects(args: dict) -> tuple:
     args['date'] = datetime.today().strftime(('%Y-%m-%d'))
+    args.pop('project_id')
 
+    args['is_archive'] = 0
     args['is_favorites'] = 0 if not args['is_favorites'] else 1
     values = tuple(args.values())
     query_insert = f'''
@@ -124,7 +126,7 @@ def create_task(args: dict):
     return {'messege': "ok"}, 200
 
 
-def get_tasks(args: dict) -> tuple:
+def get_project_details(args: dict) -> tuple:
 
     select_project_info = f'''SELECT name, id FROM Project
     WHERE id = {args['project_id']}'''
@@ -136,29 +138,21 @@ def get_tasks(args: dict) -> tuple:
 
     query_select = f'''
     SELECT  
-    name, 
-    description, 
-    owner, 
-    create_date, 
-    id  
-    FROM `Task` 
-    WHERE project_id = {args["project_id"]}
+        name, 
+        description, 
+        owner, 
+        create_date, 
+        id  
+    FROM 
+        `Task` 
+    WHERE 
     '''
 
-    select_incoming = '''SELECT 
-    name, 
-    description, 
-    owner, 
-    create_date, 
-    id  
-    FROM `Task` 
-    WHERE project_id IS NULL''' 
-
     table_keys = ['name', 'description', 'owner', 'create_date', 'task_id']
-    if args['project_id']:
-        data_to_show = select(query_select)
-    else:
-        data_to_show = select(select_incoming)
+
+    final_select = query_select + (f'project_id = {args["project_id"]}' if args["project_id"] else 'project_id IS NULL')
+
+    data_to_show = select(final_select)
     
     task_list = []
     for task in data_to_show:
@@ -168,9 +162,9 @@ def get_tasks(args: dict) -> tuple:
 
     # делаю через условие, потому что если project_data пустой, то будет ошибка при попытке обратиться по индексу
     if args['project_id']:
-        final_result = {'project_name':project_data[0][0], 'project_id':args['project_id'], 'tasks':task_list}
+        final_result = {'project_name': project_data[0][0], 'project_id': args['project_id'], 'tasks': task_list}
     else:
-        final_result = {'project_name':'Входящие', 'project_id':None, 'tasks': task_list}
+        final_result = {'project_name': 'Входящие', 'project_id': None, 'tasks': task_list}
 
     return final_result, 200
 
@@ -189,7 +183,7 @@ def comment(args: dict):
     return {'messege': "ok"}, 200
 
 
-def get_comments(args: dict) -> tuple:
+def get_task_details(args: dict) -> tuple:
     args['login'] = 'Ilusha Tester'
 
     select_tasks = f'SELECT id, project_id FROM Task WHERE id = {args["task_id"]}'
@@ -199,68 +193,54 @@ def get_comments(args: dict) -> tuple:
         return {'message': 'task not found'}, 404
 
     select_task_info = f'''
-    SELECT Task.owner, 
-    Task.name, 
-    Task.description, 
-    Task.create_date, 
-    Task.project_id, 
-    Project.name 
-    FROM `Task` 
-    JOIN `Project` 
-    ON Project.id = Task.project_id 
-    WHERE Task.id = {args['task_id']}'''
-
-    select_incoming_info = f'''SELECT 
-    Task.owner, 
-    Task.name, 
-    Task.description, 
-    Task.create_date 
-    FROM `Task` 
-    WHERE Task.id = {args["task_id"]}'''
-
-    select_comments = f'''SELECT 
-    Comments.login, 
-    Comments.create_at, 
-    Comments.text 
-    FROM `Comments` 
-    JOIN `Task` 
-    ON Comments.task_id = Task.id 
-    WHERE Comments.task_id = {args['task_id']}'''
-
-
-    if check_project_id[0][1]:
-        task_details = select(select_task_info)
-    else:
-        task_details = select(select_incoming_info)
-
-    tasks_comments = select(select_comments)
-
-    table_keys = ['login', 'create_at', 'text']
+    SELECT 
+        Project.name, 
+        Task.project_id, 
+        Task.name, 
+        Task.id, 
+        Task.owner, 
+        Task.description, 
+        Task.create_date 
+    FROM 
+        `Task` 
+    LEFT JOIN 
+        `Project` 
+    ON 
+        Project.id = Task.project_id 
+    WHERE 
+        Task.id = {args['task_id']}'''
     
+
+    select_comments = f'''
+    SELECT 
+        login, 
+        create_at, 
+        text,
+        id 
+    FROM 
+        `Comments` 
+    WHERE 
+        Comments.task_id = {args['task_id']}'''
+
+
+    # создаем два списка ключей для дальнейшего преобразования в словари
+    table_keys = ['login', 'create_at', 'text', 'id']
+    
+    project_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date']
+    task_info = select(select_task_info)
+    comments_to_send = dict(zip(project_keys, task_info[0]))
+    
+    # делаем запрос в таблицу для получения комментов и из каждой строки создаем словарь для отправки на фронт
+    # словари в свою очередь добавляем в список comment_list
+    tasks_comments = select(select_comments)
     comment_list = []
     for comment in tasks_comments:
         dict_to_append = dict(zip(table_keys, comment))
         dict_to_append['create_at'] = dict_to_append['create_at'].strftime(('%Y-%m-%d'))
         comment_list.append(dict_to_append)
 
-    if check_project_id[0][1]:
-        comments_to_send = {'project_name':task_details[0][5],
-                            'project_id':task_details[0][4],
-                            'task_name':task_details[0][1], 
-                            'task_id':args['task_id'], 
-                            'task_owner':task_details[0][0], 
-                            'description':task_details[0][2], 
-                            'create_date':task_details[0][3], 
-                            'comments':comment_list}
-    else:
-        comments_to_send = {'project_name':'Входящие',
-                            'project_id':None,
-                            'task_name':task_details[0][1], 
-                            'task_id':args['task_id'], 
-                            'task_owner':task_details[0][0], 
-                            'description':task_details[0][2], 
-                            'create_date':task_details[0][3], 
-                            'comments':comment_list}
+    comments_to_send['comments'] = comment_list
+    comments_to_send['project_name'] = comments_to_send['project_name'] or 'Входящие'
     
     comments_to_send['create_date'] = comments_to_send['create_date'].strftime(('%Y-%m-%d'))
 
@@ -286,13 +266,20 @@ def user(args: dict):
 
 def get_projects() -> tuple:
     query_select = '''
-    SELECT Project.name, Project.is_favorites, Project.id, Project.is_archive, COUNT(Task.id) 
-    FROM `Project` 
-    LEFT JOIN Task 
+    SELECT 
+        Project.name, 
+        Project.is_favorites, 
+        Project.id, 
+        Project.is_archive, 
+        COUNT(Task.id) 
+    FROM 
+        `Project` 
+    LEFT JOIN 
+        `Task` 
     ON 
-    Project.id = Task.project_id 
+        Project.id = Task.project_id 
     GROUP BY
-    Project.name, Project.is_favorites, Project.id, Project.is_archive
+        Project.name, Project.is_favorites, Project.id, Project.is_archive
     '''
     table_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count']
 

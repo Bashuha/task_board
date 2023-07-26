@@ -76,7 +76,7 @@ class Tasks(_Resource):
 
     def get(self):
         args: dict = self.parser.parse_args()
-        body, status = get_tasks(args)
+        body, status = get_project_details(args)
         return self.return_json(body, status)
     
     
@@ -92,7 +92,7 @@ class Comments(_Resource):
 
     def get(self):
         args: dict = self.parser.parse_args()
-        body, status = get_comments(args)
+        body, status = get_task_details(args)
         return self.return_json(body, status)    
 
 

@@ -90,7 +90,7 @@ def create_projects(args: dict) -> tuple:
     query_insert = query_insert.replace("'", "") + str(values)    
     insert(query_insert) 
 
-    return {'messege': "ok"}, 200
+    return {'message': "ok"}, 200
 
 
 def project_list(user='Ilusha'):
@@ -121,7 +121,7 @@ def create_task(args: dict):
     query_insert = query_insert.replace("'", "") + str(values)
     insert(query_insert)
 
-    return {'messege': "ok"}, 200
+    return 200
 
 
 def get_project_details(args: dict) -> tuple:
@@ -133,7 +133,7 @@ def get_project_details(args: dict) -> tuple:
     project_data = project_data[0][0] if project_data else None
 
     if not project_data and args['project_id']:
-        return {'message': 'project not found'}, 404
+        return {'message': 'Проект не найден'}, 404
 
     query_select = f'''
     SELECT  
@@ -159,7 +159,7 @@ def get_project_details(args: dict) -> tuple:
         dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
         task_list.append(dict_to_append)
 
-    final_result = {'project_name': project_data or 'Входящие', 'project_id': args['project_id'] or None, 'tasks': task_list}
+    final_result = {'project_name': project_data or 'Входящие', 'project_id': args['project_id'], 'tasks': task_list}
 
     return final_result, 200
 
@@ -171,7 +171,9 @@ def create_comment(args: dict):
     check_task_id = select(query_select)
 
     if not check_task_id:
-        return {'message':'task not found'}, 404
+        return {'message':'Задача не найдена'}, 404
+    
+    args.pop('comment_id')
 
     args.pop('comment_id')
     values = tuple(args.values())
@@ -181,7 +183,7 @@ def create_comment(args: dict):
     query_insert = query_insert.replace("'", "") + str(values)
     insert(query_insert)
 
-    return {'message':'ok'}, 200
+    return {'message': "ok"}, 200
 
 
 def change_comment(args: dict):
@@ -198,7 +200,7 @@ def get_task_details(args: dict) -> tuple:
     check_project_id = select(select_tasks)
 
     if not check_project_id:
-        return {'message': 'task not found'}, 404
+        return {'message': 'Задача не найдена'}, 404
 
     select_task_info = f'''
     SELECT 
@@ -269,7 +271,7 @@ def user(args: dict):
     query_insert = query_insert.replace("'", "") + str(values)
     insert(query_insert)
 
-    return {'messege': "ok"}, 200
+    return {'message': "ok"}, 200
 
 
 def get_projects() -> tuple:
@@ -311,20 +313,12 @@ def archive_project(args: dict) -> tuple:
     check_project = f'SELECT id FROM Project WHERE id = {args["project_id"]}'
     select_id = select(check_project)
     if not select_id:
-        return {'message':'project not found'}, 404
+        return {'message':'Проект не найден'}, 404
 
-    match args['is_archive']:
-        case False:
-            query_update = f'UPDATE `Project` SET is_archive = {int(args["is_archive"])} WHERE id = {args["project_id"]}'
-            update(query_update)
+    query_update = f'UPDATE `Project` SET is_archive = {int(args["is_archive"])}, is_favorites = 0 WHERE id = {args["project_id"]}'
+    update(query_update)
 
-            return {'messege': "project moved from archive"}, 200
-        
-        case True:
-            query_update = f'UPDATE `Project` SET is_archive = {int(args["is_archive"])}, is_favorites = 0 WHERE id = {args["project_id"]}'
-            update(query_update)
-
-            return {'messege': "project moved to the archive"}, 200
+    return {'message': "ok"}, 200
 
     
 
@@ -334,9 +328,9 @@ def delete_from_archive(args: dict) -> tuple:
     check_status = select(query_select)
     match check_status:
         case []:
-            return {"messege": "the project is not archived"}, 400
+            return {"message": "Проект не в архиве"}, 400
         case _:
             delete(query_delete)
-            return {'messege': "project deleted"}, 200
+            return {'message': "Проект удален"}, 200
 
 

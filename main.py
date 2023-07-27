@@ -71,7 +71,7 @@ class Tasks(_Resource):
     parser = reqparse.RequestParser(trim=True)
     parser.add_argument('name', type=str)
     parser.add_argument('description', type=str)
-    parser.add_argument('project_id', type=str)
+    parser.add_argument('project_id', type=int)
 
 
     def get(self):
@@ -82,18 +82,34 @@ class Tasks(_Resource):
     
     def post(self):
         args: dict = self.parser.parse_args()
-        return self.return_json(*create_task(args))
+        status = create_task(args)
+        return self.return_status(status)
 
 
 class Comments(_Resource):
 
     parser = reqparse.RequestParser(trim=True)
-    parser.add_argument('task_id', type=str)
+    parser.add_argument('task_id', type=int, required=True)
+    parser.add_argument('text', type=str)
+    parser.add_argument('comment_id', type=int)
+
 
     def get(self):
         args: dict = self.parser.parse_args()
         body, status = get_task_details(args)
-        return self.return_json(body, status)    
+        return self.return_json(body, status)
+    
+    
+    def post(self):
+        args: dict = self.parser.parse_args()
+        body, status = create_comment(args)
+        return self.return_json(body, status)
+    
+    
+    def put(self):
+        args: dict = self.parser.parse_args()
+        status = change_comment(args)
+        return self.return_status(status)
 
 
 api.add_resource(Tasks, '/tasks')

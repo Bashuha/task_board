@@ -82,7 +82,7 @@ def create_projects(args: dict) -> tuple:
     args.pop('project_id')
 
     args['is_archive'] = 0
-    args['is_favorites'] = 0 if not args['is_favorites'] else 1
+    args['is_favorites'] = int(args['is_favorites'])
     values = tuple(args.values())
     query_insert = f'''
     INSERT INTO `Project` 
@@ -91,7 +91,7 @@ def create_projects(args: dict) -> tuple:
     query_insert = query_insert.replace("'", "") + str(values)    
     insert(query_insert) 
 
-    return {'messege': "ok"}, 200
+    return {'message': "ok"}, 200
 
 
 def project_list(user='Ilusha'):
@@ -123,7 +123,7 @@ def create_task(args: dict):
     query_insert = query_insert.replace("'", "") + str(values)
     insert(query_insert)
 
-    return {'messege': "ok"}, 200
+    return 200
 
 
 def get_project_details(args: dict) -> tuple:
@@ -132,9 +132,10 @@ def get_project_details(args: dict) -> tuple:
     WHERE id = {args['project_id']}'''
 
     project_data = select(select_project_info)
+    project_data = project_data[0][0] if project_data else None
 
     if not project_data and args['project_id']:
-        return {'message': 'project not found'}, 404
+        return {'message': 'Проект не найден'}, 404
 
     query_select = f'''
     SELECT  
@@ -160,18 +161,22 @@ def get_project_details(args: dict) -> tuple:
         dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
         task_list.append(dict_to_append)
 
-    # делаю через условие, потому что если project_data пустой, то будет ошибка при попытке обратиться по индексу
-    if args['project_id']:
-        final_result = {'project_name': project_data[0][0], 'project_id': args['project_id'], 'tasks': task_list}
-    else:
-        final_result = {'project_name': 'Входящие', 'project_id': None, 'tasks': task_list}
+    final_result = {'project_name': project_data or 'Входящие', 'project_id': args['project_id'], 'tasks': task_list}
 
     return final_result, 200
 
 
-def comment(args: dict):
-    args['date'] = datetime.today().strftime(('%Y-%m-%d'))
+def create_comment(args: dict):
+    args['create_at'] = datetime.today().strftime(('%Y-%m-%d'))
     args['login'] = 'Ilusha Tester'
+
+    query_select = f'''SELECT id FROM `Task` WHERE id = {args['task_id']}'''
+    check_task_id = select(query_select)
+
+    if not check_task_id:
+        return {'message':'Задача не найдена'}, 404
+    
+    args.pop('comment_id')
 
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Comments` 
@@ -180,7 +185,14 @@ def comment(args: dict):
     query_insert = query_insert.replace("'", "") + str(values)
     insert(query_insert)
 
-    return {'messege': "ok"}, 200
+    return {'message': "ok"}, 200
+
+
+def change_comment(args: dict):
+    query_update = f'''UPDATE `Comments` SET text = "{args['text']}" WHERE id = {args['comment_id']}'''
+    update(query_update)
+
+    return 200
 
 
 def get_task_details(args: dict) -> tuple:
@@ -190,7 +202,7 @@ def get_task_details(args: dict) -> tuple:
     check_project_id = select(select_tasks)
 
     if not check_project_id:
-        return {'message': 'task not found'}, 404
+        return {'message': 'Задача не найдена'}, 404
 
     select_task_info = f'''
     SELECT 
@@ -261,7 +273,7 @@ def user(args: dict):
     query_insert = query_insert.replace("'", "") + str(values)
     insert(query_insert)
 
-    return {'messege': "ok"}, 200
+    return {'message': "ok"}, 200
 
 
 def get_projects() -> tuple:
@@ -303,22 +315,12 @@ def archive_project(args: dict) -> tuple:
     check_project = f'SELECT id FROM Project WHERE id = {args["project_id"]}'
     select_id = select(check_project)
     if not select_id:
-        return {'message':'project not found'}, 404
+        return {'message':'Проект не найден'}, 404
 
-    match args['is_archive']:
-        case False:
-            args['is_archive'] = 0
-            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]} WHERE id = {args["project_id"]}'
-            update(query_update)
+    query_update = f'UPDATE `Project` SET is_archive = {int(args["is_archive"])}, is_favorites = 0 WHERE id = {args["project_id"]}'
+    update(query_update)
 
-            return {'messege': "project moved from archive"}, 200
-        
-        case True:
-            args['is_archive'] = 1
-            query_update = f'UPDATE `Project` SET is_archive = {args["is_archive"]}, is_favorites = 0 WHERE id = {args["project_id"]}'
-            update(query_update)
-
-            return {'messege': "project moved to the archive"}, 200
+    return {'message': "ok"}, 200
 
     
 
@@ -328,9 +330,9 @@ def delete_from_archive(args: dict) -> tuple:
     check_status = select(query_select)
     match check_status:
         case []:
-            return {"messege": "the project is not archived"}, 400
+            return {"message": "Проект не в архиве"}, 400
         case _:
             delete(query_delete)
-            return {'messege': "project deleted"}, 200
+            return {'message': "Проект удален"}, 200
 
 

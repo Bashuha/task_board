@@ -129,6 +129,9 @@ def get_project_details(args: dict) -> tuple:
     select_project_info = f'''SELECT name, id FROM Project
     WHERE id = {args['project_id']}'''
 
+    select_sections = f'SELECT name, id FROM `Sections` WHERE project_id = {args["project_id"]}'
+    sections_data = select(select_sections)
+
     project_data = select(select_project_info)
     project_data = project_data[0][0] if project_data else None
 
@@ -141,25 +144,38 @@ def get_project_details(args: dict) -> tuple:
         description, 
         owner, 
         create_date, 
-        id  
+        section, 
+        id 
     FROM 
         `Task` 
     WHERE 
     '''
 
-    table_keys = ['name', 'description', 'owner', 'create_date', 'task_id']
+    table_keys = ['name', 'description', 'owner', 'create_date', 'section', 'task_id']
 
     final_select = query_select + (f'project_id = {args["project_id"]}' if args["project_id"] else 'project_id IS NULL')
 
     data_to_show = select(final_select)
     
-    task_list = []
-    for task in data_to_show:
-        dict_to_append = dict(zip(table_keys, task))
-        dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
-        task_list.append(dict_to_append)
+    section_list = []
+    for section in sections_data:
+        section_dict = {}
+        task_list = []
+        for task in data_to_show:
+            dict_to_append = dict(zip(table_keys, task))
+            dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
+        
+            if section[0] == dict_to_append['section']:
+                task_list.append(dict_to_append)
 
-    final_result = {'project_name': project_data or 'Входящие', 'project_id': args['project_id'], 'tasks': task_list}
+        section_dict[section[0]] = task_list
+        section_list.append(section_dict)
+        
+        
+
+    final_result = {'project_name': project_data or 'Входящие', 
+                    'project_id': args['project_id'], 
+                    'sections': section_list}
 
     return final_result, 200
 
@@ -175,7 +191,6 @@ def create_comment(args: dict):
     
     args.pop('comment_id')
 
-    args.pop('comment_id')
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Comments` 
     {tuple(args)} VALUES '''
@@ -183,7 +198,7 @@ def create_comment(args: dict):
     query_insert = query_insert.replace("'", "") + str(values)
     insert(query_insert)
 
-    return {'message': "ok"}, 200
+    return {'message':'ok'}, 200
 
 
 def change_comment(args: dict):

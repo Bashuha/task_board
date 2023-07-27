@@ -89,11 +89,26 @@ class Comments(_Resource):
 
     parser = reqparse.RequestParser(trim=True)
     parser.add_argument('task_id', type=str)
+    parser.add_argument('text', type=str)
+    parser.add_argument('comment_id', type=str)
+
 
     def get(self):
         args: dict = self.parser.parse_args()
         body, status = get_task_details(args)
-        return self.return_json(body, status)    
+        return self.return_json(body, status)
+    
+    
+    def post(self):
+        args: dict = self.parser.parse_args()
+        body, status = create_comment(args)
+        return self.return_json(body, status)
+    
+    
+    def put(self):
+        args: dict = self.parser.parse_args()
+        status = change_comment(args)
+        return self.return_status(status)
 
 
 api.add_resource(Tasks, '/tasks')

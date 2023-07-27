@@ -78,7 +78,6 @@ def select(query):
 
 
 def create_projects(args: dict) -> tuple:
-    args['date'] = datetime.today().strftime(('%Y-%m-%d'))
     args.pop('project_id')
 
     args['is_archive'] = 0
@@ -110,7 +109,6 @@ def project_list(user='Ilusha'):
 
 
 def create_task(args: dict):
-    args['create_date'] = datetime.today().strftime(('%Y-%m-%d'))
     args['owner'] = 'Ilusha Tester'
     
     if not args['project_id']: 
@@ -167,7 +165,6 @@ def get_project_details(args: dict) -> tuple:
 
 
 def create_comment(args: dict):
-    args['create_at'] = datetime.today().strftime(('%Y-%m-%d'))
     args['login'] = 'Ilusha Tester'
 
     query_select = f'''SELECT id FROM `Task` WHERE id = {args['task_id']}'''
@@ -176,6 +173,7 @@ def create_comment(args: dict):
     if not check_task_id:
         return {'message':'task not found'}, 404
 
+    args.pop('comment_id')
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Comments` 
     {tuple(args)} VALUES '''

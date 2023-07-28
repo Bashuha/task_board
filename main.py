@@ -72,6 +72,7 @@ class Tasks(_Resource):
     parser.add_argument('name', type=str)
     parser.add_argument('description', type=str)
     parser.add_argument('project_id', type=int)
+    parser.add_argument('section_id', type=int)
 
 
     def get(self):
@@ -89,10 +90,10 @@ class Tasks(_Resource):
 class Comments(_Resource):
 
     parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('comment_id', type=int)
     parser.add_argument('task_id', type=int, required=True)
     parser.add_argument('text', type=str)
-    parser.add_argument('comment_id', type=int)
-
+    
 
     def get(self):
         args: dict = self.parser.parse_args()
@@ -106,15 +107,64 @@ class Comments(_Resource):
         return self.return_json(body, status)
     
     
+class ChangeComment(_Resource):
+    
+    parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('comment_id', type=int)
+    parser.add_argument('text', type=str)
+
+
     def put(self):
         args: dict = self.parser.parse_args()
         status = change_comment(args)
+        return self.return_status(status)
+    
+
+    def delete(self):
+        args: dict = self.parser.parse_args()
+        status = delete_comment(args)
+        return self.return_status(status)
+
+
+
+class Sections(_Resource):
+    
+    parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('name', type=str)
+    parser.add_argument('project_id', type=int, required=True)
+    
+    
+    def post(self):
+        args: dict = self.parser.parse_args()
+        status = create_section(args)
+        return self.return_status(status)
+    
+
+class ChangeSection(_Resource):
+
+    parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('section_id', type=int)
+    parser.add_argument('name', type=str)
+
+
+    def put(self):
+        args: dict = self.parser.parse_args()
+        status = change_section(args)
+        return self.return_status(status)
+    
+
+    def delete(self):
+        args: dict = self.parser.parse_args()
+        status = delete_section(args)
         return self.return_status(status)
 
 
 api.add_resource(Tasks, '/tasks')
 api.add_resource(Project, '/projects')
 api.add_resource(Comments, '/comments')
+api.add_resource(Sections, '/projects/sections')
+api.add_resource(ChangeComment, '/change_comments')
+api.add_resource(ChangeSection, '/change_section')
 
 
 if __name__ == '__main__':

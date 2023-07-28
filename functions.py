@@ -110,9 +110,15 @@ def project_list(user='Ilusha'):
 
 def create_task(args: dict):
     args['owner'] = 'Ilusha Tester'
-    
+
     if not args['project_id']: 
         args.pop('project_id')
+
+    if not args['section_id']:
+        args.pop('section_id')
+
+    if not args['description']:
+        args.pop('description')
     
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Task` 
@@ -126,58 +132,131 @@ def create_task(args: dict):
 
 def get_project_details(args: dict) -> tuple:
 
-    select_project_info = f'''SELECT name, id FROM Project
-    WHERE id = {args['project_id']}'''
+    select_project_info = f'''
+    SELECT 
+        name, 
+        id 
+    FROM 
+        `Project`
+    WHERE 
+        id = {args['project_id']}
+    '''
 
-    select_sections = f'SELECT name, id FROM `Sections` WHERE project_id = {args["project_id"]}'
-    sections_data = select(select_sections)
-
-    project_data = select(select_project_info)
-    project_data = project_data[0][0] if project_data else None
+    project_data = None
+    if args['project_id']:
+        project_data = select(select_project_info)
+        project_data = project_data[0][0] if project_data else None
 
     if not project_data and args['project_id']:
         return {'message': 'Проект не найден'}, 404
 
+    select_sections = f'''
+    SELECT 
+        name, 
+        id 
+    FROM 
+        `Sections` 
+    WHERE 
+    '''
+    
     query_select = f'''
     SELECT  
         name, 
         description, 
         owner, 
         create_date, 
-        section, 
+        section_id, 
         id 
     FROM 
         `Task` 
     WHERE 
     '''
-
-    table_keys = ['name', 'description', 'owner', 'create_date', 'section', 'task_id']
-
-    final_select = query_select + (f'project_id = {args["project_id"]}' if args["project_id"] else 'project_id IS NULL')
-
-    data_to_show = select(final_select)
     
     section_list = []
-    for section in sections_data:
-        section_dict = {}
-        task_list = []
+    external_tasks = []
+    table_keys = ['name', 'description', 'owner', 'create_date', 'section_id', 'task_id']
+
+    # если указан poject_id, мы проходимся по разделам и задачам
+    # если находим совпадения по id раздела, добавляем задачу в список задач этого раздела 
+    # если у задачи section_id не указан, мы добавляем ее в список задач ПРОЕКТА вне всех разделов (external_tasks)
+    if args['project_id']:
+        query_select += f'project_id = {args["project_id"]}'
+        select_sections += f'project_id = {args["project_id"]}'
+        sections_data = select(select_sections)
+        data_to_show = select(query_select)
+
+        for section in sections_data:
+            section_dict = {}
+            task_list = []
+            for task in data_to_show:
+                dict_to_append = dict(zip(table_keys, task))
+                dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
+            
+                if section[1] == dict_to_append['section_id']:
+                    task_list.append(dict_to_append)
+                elif not dict_to_append['section_id'] and dict_to_append not in external_tasks:
+                    external_tasks.append(dict_to_append)
+
+            section_dict = {'section_name': section[0], 'section_id': section[1], 'tasks': task_list}
+            section_list.append(section_dict)
+
+    else:
+        query_select += 'project_id IS NULL'
+        select_sections += 'project_id IS NULL'
+        sections_data = select(select_sections)
+        data_to_show = select(query_select)
+
         for task in data_to_show:
             dict_to_append = dict(zip(table_keys, task))
             dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
-        
-            if section[0] == dict_to_append['section']:
-                task_list.append(dict_to_append)
-
-        section_dict[section[0]] = task_list
-        section_list.append(section_dict)
-        
+            external_tasks.append(dict_to_append)
         
 
     final_result = {'project_name': project_data or 'Входящие', 
-                    'project_id': args['project_id'], 
+                    'project_id': args['project_id'],
+                    'tasks': external_tasks,  
                     'sections': section_list}
 
     return final_result, 200
+
+
+def create_section(args: dict):
+
+    values = tuple(args.values())
+    query_insert = f'INSERT INTO `Sections` {tuple(args)} VALUES '
+    query_insert = query_insert.replace("'", "") + str(values)
+    
+    insert(query_insert)
+
+    return 200
+
+
+def delete_section(args: dict):
+    query_delete = f'''
+    DELETE
+    FROM 
+        `Sections` 
+    WHERE 
+        id = {args["section_id"]}
+    '''
+    delete(query_delete)
+
+    return 200
+
+
+def change_section(args: dict):
+    query_update = f'''
+    UPDATE 
+        `Sections` 
+    SET 
+        name = "{args['name']}" 
+    WHERE 
+        id = {args['section_id']}
+    '''
+    
+    update(query_update)
+
+    return 200
 
 
 def create_comment(args: dict):
@@ -202,10 +281,32 @@ def create_comment(args: dict):
 
 
 def change_comment(args: dict):
-    query_update = f'''UPDATE `Comments` SET text = "{args['text']}" WHERE id = {args['comment_id']}'''
+    query_update = f'''
+    UPDATE 
+        `Comments` 
+    SET 
+        text = "{args['text']}" 
+    WHERE 
+        id = {args['comment_id']}
+    '''
+    
     update(query_update)
 
     return 200
+
+
+def delete_comment(args: dict):
+    query_delete = f'''
+    DELETE
+    FROM 
+        `Comments` 
+    WHERE 
+        id = {args["project_id"]}
+    '''
+    delete(query_delete)
+
+    return 200
+
 
 
 def get_task_details(args: dict) -> tuple:

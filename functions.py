@@ -78,9 +78,7 @@ def select(query):
 
 
 def create_projects(args: dict) -> tuple:
-    args.pop('project_id')
 
-    args['is_archive'] = 0
     args['is_favorites'] = int(args['is_favorites'])
     values = tuple(args.values())
     query_insert = f'''
@@ -111,8 +109,11 @@ def project_list(user='Ilusha'):
 def create_task(args: dict):
     args['owner'] = 'Ilusha Tester'
 
+# вот тут хотелось бы покрсоте сделать, но пока до этого не добрался
+# можно сказать, что это набросок
     if not args['project_id']: 
         args.pop('project_id')
+        args.pop('section_id')
 
     if not args['section_id']:
         args.pop('section_id')
@@ -202,8 +203,6 @@ def get_project_details(args: dict) -> tuple:
 
     else:
         query_select += 'project_id IS NULL'
-        select_sections += 'project_id IS NULL'
-        sections_data = select(select_sections)
         data_to_show = select(query_select)
 
         for task in data_to_show:
@@ -244,7 +243,7 @@ def delete_section(args: dict):
     return 200
 
 
-def change_section(args: dict):
+def edit_section(args: dict):
     query_update = f'''
     UPDATE 
         `Sections` 
@@ -262,13 +261,12 @@ def change_section(args: dict):
 def create_comment(args: dict):
     args['login'] = 'Ilusha Tester'
 
-    query_select = f'''SELECT id FROM `Task` WHERE id = {args['task_id']}'''
+    query_select = f'''SELECT id FROM `Task` WHERE id = {args["task_id"]}'''
     check_task_id = select(query_select)
 
     if not check_task_id:
         return {'message':'Задача не найдена'}, 404
     
-    args.pop('comment_id')
 
     values = tuple(args.values())
     query_insert = f'''INSERT INTO `Comments` 
@@ -280,7 +278,7 @@ def create_comment(args: dict):
     return {'message':'ok'}, 200
 
 
-def change_comment(args: dict):
+def edit_comment(args: dict):
     query_update = f'''
     UPDATE 
         `Comments` 
@@ -301,7 +299,7 @@ def delete_comment(args: dict):
     FROM 
         `Comments` 
     WHERE 
-        id = {args["project_id"]}
+        id = {args['comment_id']}
     '''
     delete(query_delete)
 
@@ -309,8 +307,7 @@ def delete_comment(args: dict):
 
 
 
-def get_task_details(args: dict) -> tuple:
-    args['login'] = 'Ilusha Tester'
+def get_task_details(args: int) -> tuple:
 
     select_tasks = f'SELECT id, project_id FROM Task WHERE id = {args["task_id"]}'
     check_project_id = select(select_tasks)
@@ -326,7 +323,8 @@ def get_task_details(args: dict) -> tuple:
         Task.id, 
         Task.owner, 
         Task.description, 
-        Task.create_date 
+        Task.create_date,
+        Task.section_id 
     FROM 
         `Task` 
     LEFT JOIN 
@@ -334,7 +332,7 @@ def get_task_details(args: dict) -> tuple:
     ON 
         Project.id = Task.project_id 
     WHERE 
-        Task.id = {args['task_id']}'''
+        Task.id = {args["task_id"]}'''
     
 
     select_comments = f'''
@@ -346,13 +344,13 @@ def get_task_details(args: dict) -> tuple:
     FROM 
         `Comments` 
     WHERE 
-        Comments.task_id = {args['task_id']}'''
+        Comments.task_id = {args["task_id"]}'''
 
 
     # создаем два списка ключей для дальнейшего преобразования в словари
     table_keys = ['login', 'create_at', 'text', 'id']
     
-    project_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date']
+    project_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date', 'section_id']
     task_info = select(select_task_info)
     comments_to_send = dict(zip(project_keys, task_info[0]))
     

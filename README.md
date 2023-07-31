@@ -12,7 +12,7 @@
 8. [Создание комментария](#создание-комментария)
 
 ## Получение списка проектов
-*GET /to_do_list/projects*
+*GET /to_do_list/project_list*
 
 - Статус 200
 
@@ -21,22 +21,44 @@
 {
     "projects": [
         {
-            "project_name": "fitst_project",
+            "project_name": "second_project",
             "is_favorites": false,
-            "id": 1,
+            "id": 2,
+            "is_archive": true,
+            "task_count": 2
+        },
+        {
+            "project_name": "Серёзный проект",
+            "is_favorites": false,
+            "id": 27,
+            "is_archive": false,
             "task_count": 0
+        },
+        {
+            "project_name": "Нужно больше кельвинов",
+            "is_favorites": true,
+            "id": 29,
+            "is_archive": false,
+            "task_count": 3
+        },
+        {
+            "project_name": "Пожалуйста, работай",
+            "is_favorites": true,
+            "id": 32,
+            "is_archive": false,
+            "task_count": 3
         }
     ]
 }
 ```
 
 ## Создание проекта
-*POST /to_do_list/projects*
+*POST /to_do_list/project*
 * Тело запроса на **создание** проекта
 ```json
 {
-    "name":"our_project"
-    "is_favorites":"false",
+    "name": "our_project",
+    "is_favorites": false       // может быть и true
 }
 ```
 - Статус 200
@@ -44,12 +66,12 @@
 Ответ
 ```json
 {
-    "messege": "ok"
+    "message": "ok"
 }
 ```
 
 ## Архивация проекта
-*PUT /to_do_list/projects*
+*PUT /to_do_list/project*
 
 - Запрос на **изменение статуса** проекта. ```true``` - в архиве, ```false``` - не в архиве
 ```json
@@ -58,12 +80,13 @@
     "project_id":6
 }
 ```
+
 * Cтатус 200
 
 Ответ в случае перемещения проекта в архив 
 ```json
 {
-    "messege": "project moved to the archive"
+    "message": "ok"
 }
 ```
 * Cтатус 200
@@ -71,7 +94,7 @@
 Ответ в случае если мы достаем проект из архива 
 ```json
 {
-    "messege": "project moved from archive"
+    "message": "ok"
 }
 ```
 * Статус 404
@@ -79,12 +102,12 @@
 Ответ, если проекта в базе нет
 ```json
 {
-    "message": "project not found"
+    "message": "Проект не найден"
 }
 ```
 
 ## Удаление проекта из архива
-*DELETE /to_do_list/projects*
+*DELETE /to_do_list/project*
 
 * Тело запроса на удаление архивированного проекта
 ```json
@@ -92,12 +115,13 @@
     "project_id": 14
 }
 ```
+
 * Cтатус 200
 
 Ответ в случае успешного удаления 
 ```json
 {
-    "messege": "project deleted"
+    "message": "Проект удален"
 }
 ```
 * Cтатус 400
@@ -105,55 +129,66 @@
 Ответ на случай попытки удалить проект не в архиве 
 ```json
 {
-    "messege": "the project is not archived"
+    "message": "Проект не в архиве"
 }
 ```
 ## Получить детализацию проекта
-*GET /to_do_list/tasks*
+*GET /to_do_list/project*
 
 * Параметр запроса на получение детализации нужного проекта
 ```json
 {
-    "project_id":7
+    "project_id":32
 }
 ```
-Полный пример:
-*/to_do_list/tasks?project_id=7*
+Полный пример: 
+
+*/to_do_list/project?project_id=32*
 * Статус 200
 
 Ответ
 ```json
 {
-    "project_name": "tomatos",
-    "project_id": 7,
+    "project_name": "Пожалуйста, работай",
+    "project_id": 32,
     "tasks": [
         {
-            "name": "i_have_no_idea",
-            "description": "Nothing",
+            "name": "Задача без раздела",
+            "description": "Тут совершенно не обязательно что-то писать",
             "owner": "Ilusha Tester",
-            "create_date": "2023-07-19",
-            "task_id": 2
+            "create_date": "2023-07-31",
+            "section_id": null,
+            "task_id": 54
+        }
+    ],
+    "sections": [
+        {
+            "section_name": "Раздел для теста 1",
+            "section_id": 7,
+            "tasks": [
+                {
+                    "name": "Задача для теста",
+                    "description": "Тут совершенно не обязательно что-то писать",
+                    "owner": "Ilusha Tester",
+                    "create_date": "2023-07-31",
+                    "section_id": 7,
+                    "task_id": 55
+                }
+            ]
         },
         {
-            "name": "i_have_an_idea",
-            "description": "Smth",
-            "owner": "Ilusha Tester",
-            "create_date": "2023-07-19",
-            "task_id": 3
-        },
-        {
-            "name": "idea",
-            "description": "empty_field",
-            "owner": "Ilusha Tester",
-            "create_date": "2023-07-19",
-            "task_id": 4
-        },
-        {
-            "name": "I like kelvin",
-            "description": "God bless kelvin",
-            "owner": "Ilusha Tester",
-            "create_date": "2023-07-25",
-            "task_id": 45
+            "section_name": "Раздел для теста 2",
+            "section_id": 8,
+            "tasks": [
+                {
+                    "name": "Задача для теста 2",
+                    "description": "Тут совершенно не обязательно что-то писать",
+                    "owner": "Ilusha Tester",
+                    "create_date": "2023-07-31",
+                    "section_id": 8,
+                    "task_id": 56
+                }
+            ]
         }
     ]
 }
@@ -163,41 +198,30 @@
 
 Если не передавать параметр, то вернется список **входящих** задач
 
-*/to_do_list/tasks*
+*/to_do_list/project*
 ```json
 {
     "project_name": "Входящие",
     "project_id": null,
     "tasks": [
         {
-            "name": "i like my job",
-            "description": "i am ok",
+            "name": "Задача без проекта",
+            "description": "Типа опписание задаи",
             "owner": "Ilusha Tester",
-            "create_date": "2023-07-19",
-            "task_id": 39
+            "create_date": "2023-07-31",
+            "section_id": null,
+            "task_id": 57
         },
         {
-            "name": "Artem loves kelvin",
-            "description": "Can Artem finish kelvin?",
+            "name": "И еще одна такая же",
+            "description": "Нет тут описания",
             "owner": "Ilusha Tester",
-            "create_date": "2023-07-25",
-            "task_id": 40
-        },
-        {
-            "name": "Kelvin loves Artem",
-            "description": "Kelvin > Artem",
-            "owner": "Ilusha Tester",
-            "create_date": "2023-07-25",
-            "task_id": 41
-        },
-        {
-            "name": "Another kelvin",
-            "description": "Artem, pls",
-            "owner": "Ilusha Tester",
-            "create_date": "2023-07-25",
-            "task_id": 44
+            "create_date": "2023-07-31",
+            "section_id": null,
+            "task_id": 58
         }
-    ]
+    ],
+    "sections": []
 }
 ```
 
@@ -206,7 +230,7 @@
 Ответ в случае если соответсвующего проекта в базе нет:
 ```json
 {
-    "message": "project not found"
+    "message": "Проект не найден"
 }
 ```
 
@@ -219,21 +243,20 @@
 {
     "name": "task_name",
     "description": "description_text",
-    "project_id": 7
+    "project_id": 7    // если этот параметр не указать, создастся входящая задача
 }
 ```
 
 * Статус 200
-
-project_id можно не указывать, чтобы создать **входящую** задачу. В обоих случаях ответ будет один
+Ответ
 ```json
 {
-    "messege": "ok"
+    "message": "ok"
 }
 ```
 
 ## Получить детализацию задачи
-*GET /to_do_list/comments*
+*GET /to_do_list/task/details*
 
 * Параментры получения детализации:
 ```json
@@ -241,40 +264,33 @@ project_id можно не указывать, чтобы создать **вх�
     "task_id":35
 }
 ```
-* Полный пример */to_do_list/comments/task_id=35*
+Полный пример: 
+
+*/to_do_list/task/details?task_id=57*
 
 * Статус 200
 
 Ответ
 ```json
 {
-    "project_name": "second_project",
-    "project_id": 2,
-    "task_name": "test_comment",
-    "task_id": "35",
+    "project_name": "Пожалуйста, работай",
+    "project_id": 32,
+    "task_name": "Задача для теста 2",
+    "task_id": 56,
     "task_owner": "Ilusha Tester",
-    "description": "empty",
-    "create_date": "2023-07-19",
+    "description": "Тут совершенно не обязательно что-то писать",
+    "create_date": "2023-07-31",
+    "section_id": 8,
     "comments": [
         {
             "login": "Ilusha Tester",
-            "create_at": "2023-06-30",
-            "text": "you can do this"
-        },
-        {
-            "login": "Ilusha Tester",
-            "create_at": "2023-06-30",
-            "text": "Just do it!"
-        },
-        {
-            "login": "Ilusha Tester",
-            "create_at": "2023-06-30",
-            "text": "Artem, kelvin waits for you"
+            "create_at": "2023-07-31",
+            "text": "Коммент для теста",
+            "id": 21
         }
     ]
 }
 ```
-
 
 
 * Статус 200
@@ -284,26 +300,24 @@ project_id можно не указывать, чтобы создать **вх�
 {
     "project_name": "Входящие",
     "project_id": null,
-    "task_name": "Kelvin loves Artem",
-    "task_id": "41",
+    "task_name": "Задача без проекта",
+    "task_id": 57,
     "task_owner": "Ilusha Tester",
-    "description": "Kelvin > Artem",
-    "create_date": "2023-07-25",
+    "description": "Типа опписание задаи",
+    "create_date": "2023-07-31",
+    "section_id": null,
     "comments": [
         {
             "login": "Ilusha Tester",
-            "create_at": "2023-06-30",
-            "text": "Every single one Artem loves kelvin"
+            "create_at": "2023-07-31",
+            "text": "комент у задачи без раздела",
+            "id": 24
         },
         {
             "login": "Ilusha Tester",
-            "create_at": "2023-06-30",
-            "text": "Artem > Kelvin"
-        },
-        {
-            "login": "Ilusha Tester",
-            "create_at": "2023-06-30",
-            "text": "Can we finish Kelvin?"
+            "create_at": "2023-07-31",
+            "text": "и без проекта",
+            "id": 25
         }
     ]
 }
@@ -314,18 +328,20 @@ project_id можно не указывать, чтобы создать **вх�
 Если задача не найдена
 ```json
 {
-    "message": "task not found"
+    "message": "Задача не найдена"
 }
 ```
 
 ## Создание комментария
-* Тело запроса на создание задачи:
+*POST /to_do_list/task/details*
+* Тело запроса на создание комментария:
 ```json
 {
     "task_id": 40,
     "text": "Zdorova Makson"
 }
 ```
+
 * Статус 200
 
 Ответ
@@ -339,11 +355,12 @@ project_id можно не указывать, чтобы создать **вх�
 Ответ если указан несуществующий task_id
 ```json
 {
-    "message": "task not found"
+    "message": "Задача не найдена"
 }
 ```
 
 ## Изменение комментария
+*PUT /to_do_list/task/details*
 * Тело запроса на изменение комментария
 ```json
 {

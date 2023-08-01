@@ -236,7 +236,7 @@
 
 
 ## Создать задачу
-*POST /to_do_list/tasks*
+*POST /to_do_list/task*
 
 * Тело запроса на создание задачи:
 ```json
@@ -256,7 +256,7 @@
 ```
 
 ## Получить детализацию задачи
-*GET /to_do_list/task/details*
+*GET /to_do_list/task*
 
 * Параментры получения детализации:
 ```json
@@ -266,7 +266,7 @@
 ```
 Полный пример: 
 
-*/to_do_list/task/details?task_id=57*
+*/to_do_list/task?task_id=57*
 
 * Статус 200
 
@@ -333,7 +333,7 @@
 ```
 
 ## Создание комментария
-*POST /to_do_list/task/details*
+*POST /to_do_list/comment*
 * Тело запроса на создание комментария:
 ```json
 {
@@ -360,7 +360,7 @@
 ```
 
 ## Изменение комментария
-*PUT /to_do_list/task/details*
+*PUT /to_do_list/comment*
 * Тело запроса на изменение комментария
 ```json
 {

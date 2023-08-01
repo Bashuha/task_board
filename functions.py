@@ -147,9 +147,9 @@ def get_project_details(args: dict) -> tuple:
     if args['project_id']:
         project_data = select(select_project_info)
         project_data = project_data[0][0] if project_data else None
+        if not project_data:
+            return {'message': 'Проект не найден'}, 404
 
-    if not project_data and args['project_id']:
-        return {'message': 'Проект не найден'}, 404
 
     select_sections = f'''
     SELECT 
@@ -160,12 +160,9 @@ def get_project_details(args: dict) -> tuple:
     WHERE 
     '''
     
-    query_select = f'''
+    task_select = f'''
     SELECT  
         name, 
-        description, 
-        owner, 
-        create_date, 
         section_id, 
         id 
     FROM 
@@ -175,41 +172,43 @@ def get_project_details(args: dict) -> tuple:
     
     section_list = []
     external_tasks = []
-    table_keys = ['name', 'description', 'owner', 'create_date', 'section_id', 'task_id']
+    table_keys = ['name', 'section_id', 'task_id']
 
     # если указан poject_id, мы проходимся по разделам и задачам
     # если находим совпадения по id раздела, добавляем задачу в список задач этого раздела 
     # если у задачи section_id не указан, мы добавляем ее в список задач ПРОЕКТА вне всех разделов (external_tasks)
     if args['project_id']:
-        query_select += f'project_id = {args["project_id"]}'
+        task_select += f'project_id = {args["project_id"]}'
         select_sections += f'project_id = {args["project_id"]}'
         sections_data = select(select_sections)
-        data_to_show = select(query_select)
+        tasks = select(task_select)
 
-        for section in sections_data:
-            section_dict = {}
-            task_list = []
-            for task in data_to_show:
-                dict_to_append = dict(zip(table_keys, task))
-                dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
-            
-                if section[1] == dict_to_append['section_id']:
-                    task_list.append(dict_to_append)
-                elif not dict_to_append['section_id'] and dict_to_append not in external_tasks:
-                    external_tasks.append(dict_to_append)
-
-            section_dict = {'section_name': section[0], 'section_id': section[1], 'tasks': task_list}
-            section_list.append(section_dict)
-
+        sections = dict()
+        for sec in sections_data:
+            sections[sec[1]] = {
+                            "id":sec[1],
+                            "name":sec[0],
+                            "tasks":list()
+                               }
+            for task in tasks:
+                task_dict = dict(zip(table_keys, task))
+                if task_dict['section_id'] and task_dict['section_id'] == sec[1]:
+                    sections[task_dict.pop('section_id')]["tasks"].append(task_dict)
+                elif not task_dict['section_id']:
+                    task_dict.pop('section_id')
+                    if task_dict not in external_tasks:
+                        external_tasks.append(task_dict)
+    
+        section_list = list(sections.values())
+    
     else:
-        query_select += 'project_id IS NULL'
-        data_to_show = select(query_select)
+        task_select += 'project_id IS NULL'
+        tasks = select(task_select)
 
-        for task in data_to_show:
-            dict_to_append = dict(zip(table_keys, task))
-            dict_to_append['create_date'] = dict_to_append['create_date'].strftime(('%Y-%m-%d'))
-            external_tasks.append(dict_to_append)
-        
+        for task in tasks:
+            task_dict = dict(zip(table_keys, task))
+            task_dict.pop('section_id')
+            external_tasks.append(task_dict)
 
     final_result = {'project_name': project_data or 'Входящие', 
                     'project_id': args['project_id'],
@@ -261,7 +260,7 @@ def edit_section(args: dict):
 def create_comment(args: dict):
     args['login'] = 'Ilusha Tester'
 
-    query_select = f'''SELECT id FROM `Task` WHERE id = {args["task_id"]}'''
+    query_select = f'SELECT id FROM `Task` WHERE id = {args["task_id"]}'
     check_task_id = select(query_select)
 
     if not check_task_id:
@@ -389,7 +388,9 @@ def user(args: dict):
 
 
 def get_projects() -> tuple:
-    query_select = '''
+    query_section = 'SELECT id, name, project_id FROM `Sections`'
+
+    query_project_list = '''
     SELECT 
         Project.name, 
         Project.is_favorites, 
@@ -406,19 +407,31 @@ def get_projects() -> tuple:
         Project.name, Project.is_favorites, Project.id, Project.is_archive
     '''
     table_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count']
+    section_keys = ['section_id', 'name', 'project_id']
 
-    data_to_show = select(query_select)
-    send_list = []
-    for el in data_to_show:
-        el = list(el)
-        el[1] = bool(el[1])
+    project_list = select(query_project_list)
 
-        el[-2] = bool(el[-2])
+    section_list = select(query_section)
+    final_result = []
 
-        dict_to_append = dict(zip(table_keys, el))
-        send_list.append(dict_to_append)
+    for proj in project_list:
+        proj = list(proj)
 
-    projects = {'projects':send_list}
+        proj[1] = bool(proj[1])
+        proj[-2] = bool(proj[-2])
+        
+        project_dict = dict(zip(table_keys, proj))
+        project_dict['sections'] = list()
+
+        for section in section_list:
+            if project_dict['id'] == section[2]:
+                section_dict = dict(zip(section_keys, section))
+                section_dict.pop('project_id')
+                project_dict['sections'].append(section_dict)
+
+        final_result.append(project_dict)
+
+    projects = {'projects':final_result}
     return projects, 200
 
 
@@ -436,9 +449,9 @@ def archive_project(args: dict) -> tuple:
 
     
 
-def delete_from_archive(args: dict) -> tuple:
-    query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {args["project_id"]}'    
-    query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {args["project_id"]}'
+def delete_from_archive(args) -> tuple:
+    query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {args}'    
+    query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {args}'
     check_status = select(query_select)
     match check_status:
         case []:

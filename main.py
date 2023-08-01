@@ -49,7 +49,6 @@ class Project(_Resource):
     parser = reqparse.RequestParser(trim=True)
     parser.add_argument('name', type=str)
     parser.add_argument('is_favorites', type=ParseBool)
-    parser.add_argument('project_id', type=int)
 
     edit_parser = reqparse.RequestParser(trim=True)
     edit_parser.add_argument('project_id', type=int, required=True)
@@ -59,7 +58,7 @@ class Project(_Resource):
 
 
     def get(self):
-        args: dict = self.parser.parse_args()
+        args: dict = self.edit_parser.parse_args()
         body, status = get_project_details(args)
         return self.return_json(body, status)
 
@@ -76,7 +75,7 @@ class Project(_Resource):
     
     def delete(self):
         args: dict = self.edit_parser.parse_args()
-        return self.return_json(*delete_from_archive(args))
+        return self.return_json(*delete_from_archive(args['project_id']))
     
 
 class Tasks(_Resource):
@@ -86,12 +85,21 @@ class Tasks(_Resource):
     parser.add_argument('description', type=str)
     parser.add_argument('project_id', type=int)
     parser.add_argument('section_id', type=int)
+
+    id_parser = reqparse.RequestParser(trim=True)
+    id_parser.add_argument('task_id', type=int, required=True)
     
     
     def post(self):
         args: dict = self.parser.parse_args()
         status = create_task(args)
         return self.return_status(status)
+    
+
+    def get(self):
+        args: dict = self.id_parser.parse_args()
+        body, status = get_task_details(args)
+        return self.return_json(body, status)
 
 
 class Comments(_Resource):
@@ -103,12 +111,6 @@ class Comments(_Resource):
     edit_parser = reqparse.RequestParser(trim=True)
     edit_parser.add_argument('text', type=str)
     edit_parser.add_argument('comment_id', type=int, required=True)
-
-
-    def get(self):
-        args: dict = self.parser.parse_args()
-        body, status = get_task_details(args)
-        return self.return_json(body, status)
     
     
     def post(self):
@@ -159,11 +161,11 @@ class Sections(_Resource):
         return self.return_status(status)
 
 
-api.add_resource(Tasks, '/tasks')
+api.add_resource(Tasks, '/task')
 api.add_resource(ProjectList, '/project_list')
 api.add_resource(Project, '/project')
-api.add_resource(Comments, '/task/details')
-api.add_resource(Sections, '/project/sections')
+api.add_resource(Comments, '/comment')
+api.add_resource(Sections, '/section')
 
 
 if __name__ == '__main__':

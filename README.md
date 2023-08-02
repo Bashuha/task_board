@@ -8,8 +8,13 @@
 4. [Удаление проекта из архива](#удаление-проекта-из-архива)
 5. [Получить детализацию проекта](#получить-детализацию-проекта)
 6. [Создать задачу](#создать-задачу)
-7. [Получить детализацию задачи](#получить-детализацию-задачи)
-8. [Создание комментария](#создание-комментария)
+7. [Редактировать задачу](#редактировать-задачу)
+8. [Получить детализацию задачи](#получить-детализацию-задачи)
+9. [Создание комментария](#создание-комментария)
+10. [Удаление комментария](#удаление-комментария)
+11. [Создание раздела](#создание-раздела)
+12. [Редактирование раздела](#редактирование-раздела)
+13. [Удаление раздела](#удаление-раздела)
 
 ## Получение списка проектов
 *GET /to_do_list/project_list*
@@ -20,34 +25,76 @@
 ```json
 {
     "projects": [
-        {
-            "project_name": "second_project",
-            "is_favorites": false,
-            "id": 2,
-            "is_archive": true,
-            "task_count": 2
-        },
-        {
-            "project_name": "Серёзный проект",
-            "is_favorites": false,
-            "id": 27,
-            "is_archive": false,
-            "task_count": 0
-        },
-        {
-            "project_name": "Нужно больше кельвинов",
-            "is_favorites": true,
-            "id": 29,
-            "is_archive": false,
-            "task_count": 3
-        },
-        {
-            "project_name": "Пожалуйста, работай",
-            "is_favorites": true,
-            "id": 32,
-            "is_archive": false,
-            "task_count": 3
-        }
+        [
+            {
+                "project_name": "tomatos",
+                "is_favorites": false,
+                "id": 7,
+                "is_archive": false,
+                "task_count": 2,
+                "sections": [
+                    {
+                        "section_id": 9,
+                        "name": "Тест создания раздела",
+                        "project_id": 7
+                    }
+                ]
+            },
+            {
+                "project_name": "Серёзный проект",
+                "is_favorites": false,
+                "id": 27,
+                "is_archive": false,
+                "task_count": 0,
+                "sections": []
+            },
+            {
+                "project_name": "Нужно больше кельвинов",
+                "is_favorites": true,
+                "id": 29,
+                "is_archive": false,
+                "task_count": 3,
+                "sections": [
+                    {
+                        "section_id": 3,
+                        "name": "Раздел Артема и Кельвина",
+                        "project_id": 29
+                    },
+                    {
+                        "section_id": 4,
+                        "name": "Раздел Артема и Кельвина",
+                        "project_id": 29
+                    }
+                ]
+            },
+            {
+                "project_name": "Нужно больше кельвинов x2",
+                "is_favorites": false,
+                "id": 31,
+                "is_archive": false,
+                "task_count": 0,
+                "sections": []
+            },
+            {
+                "project_name": "Пожалуйста, работай",
+                "is_favorites": false,
+                "id": 32,
+                "is_archive": true,
+                "task_count": 6,
+                "sections": [
+                    {
+                        "section_id": 7,
+                        "name": "Раздел для теста 1",
+                        "project_id": 32
+                    },
+                    {
+                        "section_id": 8,
+                        "name": "Раздел для теста 2",
+                        "project_id": 32
+                    }
+                ]
+            }
+        ]
     ]
 }
 ```
@@ -149,44 +196,22 @@
 Ответ
 ```json
 {
-    "project_name": "Пожалуйста, работай",
-    "project_id": 32,
+    "project_name": "tomatos",
+    "project_id": 7,
     "tasks": [
         {
-            "name": "Задача без раздела",
-            "description": "Тут совершенно не обязательно что-то писать",
-            "owner": "Ilusha Tester",
-            "create_date": "2023-07-31",
-            "section_id": null,
-            "task_id": 54
+            "name": "Тест создания задачи без раздела",
+            "task_id": 65
         }
     ],
     "sections": [
         {
-            "section_name": "Раздел для теста 1",
-            "section_id": 7,
+            "id": 9,
+            "name": "Тест создания раздела",
             "tasks": [
                 {
-                    "name": "Задача для теста",
-                    "description": "Тут совершенно не обязательно что-то писать",
-                    "owner": "Ilusha Tester",
-                    "create_date": "2023-07-31",
-                    "section_id": 7,
-                    "task_id": 55
-                }
-            ]
-        },
-        {
-            "section_name": "Раздел для теста 2",
-            "section_id": 8,
-            "tasks": [
-                {
-                    "name": "Задача для теста 2",
-                    "description": "Тут совершенно не обязательно что-то писать",
-                    "owner": "Ilusha Tester",
-                    "create_date": "2023-07-31",
-                    "section_id": 8,
-                    "task_id": 56
+                    "name": "Тест создания задачи",
+                    "task_id": 64
                 }
             ]
         }
@@ -206,18 +231,10 @@
     "tasks": [
         {
             "name": "Задача без проекта",
-            "description": "Типа опписание задаи",
-            "owner": "Ilusha Tester",
-            "create_date": "2023-07-31",
-            "section_id": null,
             "task_id": 57
         },
         {
             "name": "И еще одна такая же",
-            "description": "Нет тут описания",
-            "owner": "Ilusha Tester",
-            "create_date": "2023-07-31",
-            "section_id": null,
             "task_id": 58
         }
     ],
@@ -243,7 +260,30 @@
 {
     "name": "task_name",
     "description": "description_text",
-    "project_id": 7    // если этот параметр не указать, создастся входящая задача
+    "project_id": 7,   // если этот параметр не указать, создастся входящая задача
+    "section_id": 9     // если этот параметр не указать, в проекте создастся задача без раздела
+}
+```
+
+* Статус 200
+Ответ
+```json
+{
+    "message": "ok"
+}
+```
+
+## Редактировать задачу
+*POST /to_do_list/task*
+
+* Тело запроса на редактирование задачи
+```json
+{
+    "task_id": 60, 
+    "name": "new_task_name",
+    "description": "new_description_text",
+    "project_id": 7, 
+    "section_id": 9
 }
 ```
 
@@ -368,6 +408,52 @@
     "text": "This is the new comment text"
 }
 ```
+В ответ придет только статус
 * Статус 200
 
-В ответ придет просто статус
+
+## Удаление комментария
+*DELETE /to_do_list/comment*
+* Тело запроса на удаление комментария
+```json
+{
+    "comment_id": 40
+}
+```
+В ответ придет только статус
+* Статус 200
+
+## Создание раздела
+*POST /to_do_list/section*
+* Тело запроса на создание раздела
+```json
+{
+    "project_id": 7,
+    "name": "section_name"
+}
+```
+В ответ приходит только статус
+* Статус 200
+
+## Редактирование раздела
+*PUT /to_do_list/section*
+* Тело запроса на редактирование раздела
+```json
+{
+    "section_id": 7,
+    "name": "new_section_name"
+}
+```
+В ответ приходит только статус
+* Статус 200
+
+## Удаление раздела
+*DELETE /to_do_list/section*
+* Тело запроса на удаление раздела
+```json
+{
+    "section_id": 7
+}
+```
+В ответ приходит только статус
+* Статус 200

@@ -49,6 +49,7 @@ class Project(_Resource):
     parser = reqparse.RequestParser(trim=True)
     parser.add_argument('name', type=str)
     parser.add_argument('is_favorites', type=ParseBool)
+    parser.add_argument('project_id', type=int)
 
     edit_parser = reqparse.RequestParser(trim=True)
     edit_parser.add_argument('project_id', type=int, required=True)
@@ -58,7 +59,7 @@ class Project(_Resource):
 
 
     def get(self):
-        args: dict = self.edit_parser.parse_args()
+        args: dict = self.parser.parse_args()
         body, status = get_project_details(args)
         return self.return_json(body, status)
 
@@ -86,9 +87,13 @@ class Tasks(_Resource):
     parser.add_argument('project_id', type=int)
     parser.add_argument('section_id', type=int)
 
-    id_parser = reqparse.RequestParser(trim=True)
-    id_parser.add_argument('task_id', type=int, required=True)
-    
+    edit_parser = reqparse.RequestParser(trim=True)
+    edit_parser.add_argument('task_id', type=int, required=True)
+    edit_parser.add_argument('name', type=str)
+    edit_parser.add_argument('description', type=str)
+    edit_parser.add_argument('project_id', type=int)
+    edit_parser.add_argument('section_id', type=int)
+
     
     def post(self):
         args: dict = self.parser.parse_args()
@@ -97,8 +102,14 @@ class Tasks(_Resource):
     
 
     def get(self):
-        args: dict = self.id_parser.parse_args()
-        body, status = get_task_details(args)
+        args: dict = self.edit_parser.parse_args()
+        body, status = get_task_details(args['task_id'])
+        return self.return_json(body, status)
+    
+
+    def put(self):
+        args: dict = self.edit_parser.parse_args()
+        body, status = edit_task(args)
         return self.return_json(body, status)
 
 
@@ -127,7 +138,7 @@ class Comments(_Resource):
 
     def delete(self):
         args: dict = self.edit_parser.parse_args()
-        status = delete_comment(args)
+        status = delete_comment(args['comment_id'])
         return self.return_status(status)
 
 
@@ -157,7 +168,7 @@ class Sections(_Resource):
 
     def delete(self):
         args: dict = self.edit_parser.parse_args()
-        status = delete_section(args)
+        status = delete_section(args['section_id'])
         return self.return_status(status)
 
 

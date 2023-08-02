@@ -106,11 +106,73 @@ def project_list(user='Ilusha'):
     return send_dict, 200
 
 
+def get_task_details(task_id) -> tuple:
+
+    select_tasks = f'SELECT id, project_id FROM Task WHERE id = {task_id}'
+    check_project_id = select(select_tasks)
+
+    if not check_project_id:
+        return {'message': 'Задача не найдена'}, 404
+
+    select_task_info = f'''
+    SELECT 
+        Project.name, 
+        Task.project_id, 
+        Task.name, 
+        Task.id, 
+        Task.owner, 
+        Task.description, 
+        Task.create_date,
+        Task.section_id 
+    FROM 
+        `Task` 
+    LEFT JOIN 
+        `Project` 
+    ON 
+        Project.id = Task.project_id 
+    WHERE 
+        Task.id = {task_id}'''
+    
+
+    select_comments = f'''
+    SELECT 
+        login, 
+        create_at, 
+        text,
+        id 
+    FROM 
+        `Comments` 
+    WHERE 
+        Comments.task_id = {task_id}'''
+
+
+    # создаем два списка ключей для дальнейшего преобразования в словари
+    table_keys = ['login', 'create_at', 'text', 'id']
+    
+    project_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date', 'section_id']
+    task_info = select(select_task_info)
+    comments_to_send = dict(zip(project_keys, task_info[0]))
+    
+    # делаем запрос в таблицу для получения комментов и из каждой строки создаем словарь для отправки на фронт
+    # словари в свою очередь добавляем в список comment_list
+    tasks_comments = select(select_comments)
+    comment_list = []
+    for comment in tasks_comments:
+        dict_to_append = dict(zip(table_keys, comment))
+        dict_to_append['create_at'] = dict_to_append['create_at'].strftime(('%Y-%m-%d'))
+        comment_list.append(dict_to_append)
+
+    comments_to_send['comments'] = comment_list
+    comments_to_send['project_name'] = comments_to_send['project_name'] or 'Входящие'
+    
+    comments_to_send['create_date'] = comments_to_send['create_date'].strftime(('%Y-%m-%d'))
+
+    return comments_to_send, 200
+
+
 def create_task(args: dict):
     args['owner'] = 'Ilusha Tester'
 
-# вот тут хотелось бы покрсоте сделать, но пока до этого не добрался
-# можно сказать, что это набросок
     if not args['project_id']: 
         args.pop('project_id')
         args.pop('section_id')
@@ -131,6 +193,35 @@ def create_task(args: dict):
     return 200
 
 
+def edit_task(args: dict):
+
+    query_update = "UPDATE `Task` SET"
+
+    if args['project_id']:
+        query_select = f"SELECT id FROM `Project` WHERE id = {args['project_id']}"
+        if not select(query_select):
+            return {"message": "Проект не найден"}, 404
+
+    if args['name']:
+        query_update += f" name = '{args['name']}',"
+    if args['description']:
+        query_update += f" description = '{args['description']}',"
+    if args['project_id'] or args['project_id'] == 0:
+        if args['project_id'] == 0:
+            query_update += " project_id = NULL,"
+        else:
+            query_update += f" project_id = {args['project_id']},"
+    if args['section_id']:
+        query_update += f" section_id = {args['section_id']},"
+
+    query_update = query_update[:-1]
+    query_update += f" WHERE id = {args['task_id']}"
+
+    update(query_update)
+
+    return {"message": "ok"}, 200
+    
+
 def get_project_details(args: dict) -> tuple:
 
     select_project_info = f'''
@@ -146,8 +237,9 @@ def get_project_details(args: dict) -> tuple:
     project_data = None
     if args['project_id']:
         project_data = select(select_project_info)
-        project_data = project_data[0][0] if project_data else None
-        if not project_data:
+        if project_data:
+            project_data = project_data[0][0]
+        else:
             return {'message': 'Проект не найден'}, 404
 
 
@@ -190,14 +282,14 @@ def get_project_details(args: dict) -> tuple:
                             "name":sec[0],
                             "tasks":list()
                                }
-            for task in tasks:
-                task_dict = dict(zip(table_keys, task))
-                if task_dict['section_id'] and task_dict['section_id'] == sec[1]:
-                    sections[task_dict.pop('section_id')]["tasks"].append(task_dict)
-                elif not task_dict['section_id']:
-                    task_dict.pop('section_id')
-                    if task_dict not in external_tasks:
-                        external_tasks.append(task_dict)
+        for task in tasks:
+            task_dict = dict(zip(table_keys, task))
+            if task_dict['section_id']:
+                sections[task_dict.pop('section_id')]["tasks"].append(task_dict)
+            elif not task_dict['section_id']:
+                task_dict.pop('section_id')
+                if task_dict not in external_tasks:
+                    external_tasks.append(task_dict)
     
         section_list = list(sections.values())
     
@@ -229,13 +321,13 @@ def create_section(args: dict):
     return 200
 
 
-def delete_section(args: dict):
+def delete_section(section_id):
     query_delete = f'''
     DELETE
     FROM 
         `Sections` 
     WHERE 
-        id = {args["section_id"]}
+        id = {section_id}
     '''
     delete(query_delete)
 
@@ -292,83 +384,17 @@ def edit_comment(args: dict):
     return 200
 
 
-def delete_comment(args: dict):
+def delete_comment(comment_id):
     query_delete = f'''
     DELETE
     FROM 
         `Comments` 
     WHERE 
-        id = {args['comment_id']}
+        id = {comment_id}
     '''
     delete(query_delete)
 
     return 200
-
-
-
-def get_task_details(args: int) -> tuple:
-
-    select_tasks = f'SELECT id, project_id FROM Task WHERE id = {args["task_id"]}'
-    check_project_id = select(select_tasks)
-
-    if not check_project_id:
-        return {'message': 'Задача не найдена'}, 404
-
-    select_task_info = f'''
-    SELECT 
-        Project.name, 
-        Task.project_id, 
-        Task.name, 
-        Task.id, 
-        Task.owner, 
-        Task.description, 
-        Task.create_date,
-        Task.section_id 
-    FROM 
-        `Task` 
-    LEFT JOIN 
-        `Project` 
-    ON 
-        Project.id = Task.project_id 
-    WHERE 
-        Task.id = {args["task_id"]}'''
-    
-
-    select_comments = f'''
-    SELECT 
-        login, 
-        create_at, 
-        text,
-        id 
-    FROM 
-        `Comments` 
-    WHERE 
-        Comments.task_id = {args["task_id"]}'''
-
-
-    # создаем два списка ключей для дальнейшего преобразования в словари
-    table_keys = ['login', 'create_at', 'text', 'id']
-    
-    project_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date', 'section_id']
-    task_info = select(select_task_info)
-    comments_to_send = dict(zip(project_keys, task_info[0]))
-    
-    # делаем запрос в таблицу для получения комментов и из каждой строки создаем словарь для отправки на фронт
-    # словари в свою очередь добавляем в список comment_list
-    tasks_comments = select(select_comments)
-    comment_list = []
-    for comment in tasks_comments:
-        dict_to_append = dict(zip(table_keys, comment))
-        dict_to_append['create_at'] = dict_to_append['create_at'].strftime(('%Y-%m-%d'))
-        comment_list.append(dict_to_append)
-
-    comments_to_send['comments'] = comment_list
-    comments_to_send['project_name'] = comments_to_send['project_name'] or 'Входящие'
-    
-    comments_to_send['create_date'] = comments_to_send['create_date'].strftime(('%Y-%m-%d'))
-
-    return comments_to_send, 200
-
 
 
 def user(args: dict):
@@ -388,7 +414,7 @@ def user(args: dict):
 
 
 def get_projects() -> tuple:
-    query_section = 'SELECT id, name, project_id FROM `Sections`'
+    query_section = 'SELECT id, name, project_id FROM `Sections` ORDER BY project_id'
 
     query_project_list = '''
     SELECT 
@@ -404,32 +430,32 @@ def get_projects() -> tuple:
     ON 
         Project.id = Task.project_id 
     GROUP BY
-        Project.name, Project.is_favorites, Project.id, Project.is_archive
+        Project.name, Project.is_favorites, Project.id, Project.is_archive 
+    ORDER BY 
+        Project.id
     '''
-    table_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count']
+    proj_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count']
     section_keys = ['section_id', 'name', 'project_id']
 
     project_list = select(query_project_list)
 
     section_list = select(query_section)
     final_result = []
-
+    project_dict = dict()
     for proj in project_list:
-        proj = list(proj)
+        project_dict[proj[2]] = dict(zip(proj_keys, proj))
 
-        proj[1] = bool(proj[1])
-        proj[-2] = bool(proj[-2])
+
+        project_dict[proj[2]]['is_favorites'] = bool(project_dict[proj[2]]['is_favorites'])
+        project_dict[proj[2]]['is_archive'] = bool(project_dict[proj[2]]['is_archive'])
         
-        project_dict = dict(zip(table_keys, proj))
-        project_dict['sections'] = list()
+        project_dict[proj[2]]['sections'] = list()
 
-        for section in section_list:
-            if project_dict['id'] == section[2]:
-                section_dict = dict(zip(section_keys, section))
-                section_dict.pop('project_id')
-                project_dict['sections'].append(section_dict)
+    for section in section_list:
+        section_dict = dict(zip(section_keys, section))
+        project_dict[section_dict['project_id']]['sections'].append(section_dict)
 
-        final_result.append(project_dict)
+    final_result.append(list(project_dict.values()))
 
     projects = {'projects':final_result}
     return projects, 200
@@ -449,15 +475,14 @@ def archive_project(args: dict) -> tuple:
 
     
 
-def delete_from_archive(args) -> tuple:
-    query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {args}'    
-    query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {args}'
+def delete_from_archive(project_id) -> tuple:
+    query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {project_id}'    
+    query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {project_id}'
     check_status = select(query_select)
-    match check_status:
-        case []:
-            return {"message": "Проект не в архиве"}, 400
-        case _:
-            delete(query_delete)
-            return {'message': "Проект удален"}, 200
+    if not check_status:
+        return {"message": "Проект не в архиве"}, 400
+    else:
+        delete(query_delete)
+        return {'message': "Проект удален"}, 200
 
 

@@ -25,76 +25,82 @@
 ```json
 {
     "projects": [
-        [
-            {
-                "project_name": "tomatos",
-                "is_favorites": false,
-                "id": 7,
-                "is_archive": false,
-                "task_count": 2,
-                "sections": [
-                    {
-                        "section_id": 9,
-                        "name": "Тест создания раздела",
-                        "project_id": 7
-                    }
-                ]
-            },
-            {
-                "project_name": "Серёзный проект",
-                "is_favorites": false,
-                "id": 27,
-                "is_archive": false,
-                "task_count": 0,
-                "sections": []
-            },
-            {
-                "project_name": "Нужно больше кельвинов",
-                "is_favorites": true,
-                "id": 29,
-                "is_archive": false,
-                "task_count": 3,
-                "sections": [
-                    {
-                        "section_id": 3,
-                        "name": "Раздел Артема и Кельвина",
-                        "project_id": 29
-                    },
-                    {
-                        "section_id": 4,
-                        "name": "Раздел Артема и Кельвина",
-                        "project_id": 29
-                    }
-                ]
-            },
-            {
-                "project_name": "Нужно больше кельвинов x2",
-                "is_favorites": false,
-                "id": 31,
-                "is_archive": false,
-                "task_count": 0,
-                "sections": []
-            },
-            {
-                "project_name": "Пожалуйста, работай",
-                "is_favorites": false,
-                "id": 32,
-                "is_archive": true,
-                "task_count": 6,
-                "sections": [
-                    {
-                        "section_id": 7,
-                        "name": "Раздел для теста 1",
-                        "project_id": 32
-                    },
-                    {
-                        "section_id": 8,
-                        "name": "Раздел для теста 2",
-                        "project_id": 32
-                    }
-                ]
-            }
-        ]
+        {
+            "project_name": "tomatos",
+            "is_favorites": false,
+            "id": 7,
+            "is_archive": false,
+            "task_count": 3,
+            "sections": [
+                {
+                    "section_id": 9,
+                    "name": "Тест создания раздела",
+                    "project_id": 7
+                }
+            ]
+        },
+        {
+            "project_name": "Серёзный проект",
+            "is_favorites": false,
+            "id": 27,
+            "is_archive": false,
+            "task_count": 0,
+            "sections": []
+        },
+        {
+            "project_name": "i76r76rf",
+            "is_favorites": false,
+            "id": 28,
+            "is_archive": false,
+            "task_count": 0,
+            "sections": []
+        },
+        {
+            "project_name": "Нужно больше кельвинов",
+            "is_favorites": true,
+            "id": 29,
+            "is_archive": false,
+            "task_count": 2,
+            "sections": [
+                {
+                    "section_id": 3,
+                    "name": "Раздел Артема и Кельвина",
+                    "project_id": 29
+                },
+                {
+                    "section_id": 4,
+                    "name": "Измененное имя раздела",
+                    "project_id": 29
+                }
+            ]
+        },
+        {
+            "project_name": "Нужно больше кельвинов x2",
+            "is_favorites": false,
+            "id": 31,
+            "is_archive": false,
+            "task_count": 0,
+            "sections": []
+        },
+        {
+            "project_name": "Пожалуйста, работай",
+            "is_favorites": false,
+            "id": 32,
+            "is_archive": true,
+            "task_count": 5,
+            "sections": [
+                {
+                    "section_id": 7,
+                    "name": "Раздел для теста 1",
+                    "project_id": 32
+                },
+                {
+                    "section_id": 11,
+                    "name": "Тест создания второго раздела",
+                    "project_id": 32
+                }
+            ]
+        }
     ]
 }
 ```

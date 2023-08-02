@@ -196,31 +196,32 @@ def create_task(args: dict):
 def edit_task(args: dict):
 
     query_update = "UPDATE `Task` SET"
+    query_list = list()
 
     if args['project_id']:
         query_select = f"SELECT id FROM `Project` WHERE id = {args['project_id']}"
         if not select(query_select):
             return {"message": "Проект не найден"}, 404
+        query_list.append(f" project_id = {args['project_id']}")
+    else:
+        query_list.append(" project_id = NULL")
 
     if args['name']:
-        query_update += f" name = '{args['name']}',"
-    if args['description']:
-        query_update += f" description = '{args['description']}',"
-    if args['project_id'] or args['project_id'] == 0:
-        if args['project_id'] == 0:
-            query_update += " project_id = NULL,"
-        else:
-            query_update += f" project_id = {args['project_id']},"
-    if args['section_id']:
-        query_update += f" section_id = {args['section_id']},"
+        query_list.append(f" name = '{args['name']}'")
 
-    query_update = query_update[:-1]
+    if args['description'] == "" or args['description']:
+        query_list.append(f" description = '{args['description']}'")
+    
+    if args['section_id']:
+        query_list.append(f" section_id = {args['section_id']}")
+
+    query_update += ",".join(query_list)
     query_update += f" WHERE id = {args['task_id']}"
 
     update(query_update)
 
     return {"message": "ok"}, 200
-    
+
 
 def get_project_details(args: dict) -> tuple:
 
@@ -440,10 +441,10 @@ def get_projects() -> tuple:
     project_list = select(query_project_list)
 
     section_list = select(query_section)
-    final_result = []
     project_dict = dict()
     for proj in project_list:
-        project_dict[proj[2]] = dict(zip(proj_keys, proj))
+        custom_project_dict = dict(zip(proj_keys, proj))
+        project_dict[proj[2]] = custom_project_dict
 
 
         project_dict[proj[2]]['is_favorites'] = bool(project_dict[proj[2]]['is_favorites'])
@@ -455,9 +456,8 @@ def get_projects() -> tuple:
         section_dict = dict(zip(section_keys, section))
         project_dict[section_dict['project_id']]['sections'].append(section_dict)
 
-    final_result.append(list(project_dict.values()))
-
-    projects = {'projects':final_result}
+    projects = dict()
+    projects['projects'] = list(project_dict.values())
     return projects, 200
 
 
@@ -479,10 +479,10 @@ def delete_from_archive(project_id) -> tuple:
     query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {project_id}'    
     query_delete = f'DELETE FROM `Project` WHERE is_archive = 1 AND id = {project_id}'
     check_status = select(query_select)
-    if not check_status:
-        return {"message": "Проект не в архиве"}, 400
-    else:
+    if check_status:
         delete(query_delete)
         return {'message': "Проект удален"}, 200
+    
+    return {"message": "Проект не в архиве"}, 400
 
 

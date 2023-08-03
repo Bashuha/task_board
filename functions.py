@@ -435,7 +435,7 @@ def get_projects() -> tuple:
     ORDER BY 
         Project.id
     '''
-    proj_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count']
+    proj_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count', 'comment_count']
     section_keys = ['section_id', 'name', 'project_id']
 
     project_list = select(query_project_list)

@@ -37,19 +37,32 @@ class ParseBool():
 
 
 
-class Project(_Resource):
-
-    parser = reqparse.RequestParser(trim=True)
-    parser.add_argument('name', type=str)
-    parser.add_argument('is_favorites', type=ParseBool)
-    parser.add_argument('is_archive', type=ParseBool)
-    parser.add_argument('project_id', type=int)
-
+class ProjectList(_Resource):
 
     def get(self):
         body, status = get_projects()
         return self.return_json(body, status)
     
+
+class Project(_Resource):
+
+    parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('name', type=str)
+    parser.add_argument('is_favorites', type=ParseBool)
+    parser.add_argument('project_id', type=int)
+
+    edit_parser = reqparse.RequestParser(trim=True)
+    edit_parser.add_argument('project_id', type=int, required=True)
+    edit_parser.add_argument('is_favorites', type=ParseBool)
+    edit_parser.add_argument('name', type=str)
+    edit_parser.add_argument('is_archive', type=ParseBool)
+
+
+    def get(self):
+        args: dict = self.parser.parse_args()
+        body, status = get_project_details(args)
+        return self.return_json(body, status)
+
 
     def post(self):
         args: dict = self.parser.parse_args()
@@ -57,13 +70,13 @@ class Project(_Resource):
     
 
     def put(self):
-        args: dict = self.parser.parse_args()
+        args: dict = self.edit_parser.parse_args()
         return self.return_json(*archive_project(args))
     
     
     def delete(self):
-        args: dict = self.parser.parse_args()
-        return self.return_json(*delete_from_archive(args))
+        args: dict = self.edit_parser.parse_args()
+        return self.return_json(*delete_from_archive(args['project_id']))
     
 
 class Tasks(_Resource):
@@ -72,18 +85,32 @@ class Tasks(_Resource):
     parser.add_argument('name', type=str)
     parser.add_argument('description', type=str)
     parser.add_argument('project_id', type=int)
+    parser.add_argument('section_id', type=int)
 
+    edit_parser = reqparse.RequestParser(trim=True)
+    edit_parser.add_argument('task_id', type=int, required=True)
+    edit_parser.add_argument('name', type=str)
+    edit_parser.add_argument('description', type=str)
+    edit_parser.add_argument('project_id', type=int)
+    edit_parser.add_argument('section_id', type=int)
 
-    def get(self):
-        args: dict = self.parser.parse_args()
-        body, status = get_project_details(args)
-        return self.return_json(body, status)
-    
     
     def post(self):
         args: dict = self.parser.parse_args()
         status = create_task(args)
         return self.return_status(status)
+    
+
+    def get(self):
+        args: dict = self.edit_parser.parse_args()
+        body, status = get_task_details(args['task_id'])
+        return self.return_json(body, status)
+    
+
+    def put(self):
+        args: dict = self.edit_parser.parse_args()
+        body, status = edit_task(args)
+        return self.return_json(body, status)
 
 
 class Comments(_Resource):
@@ -91,13 +118,10 @@ class Comments(_Resource):
     parser = reqparse.RequestParser(trim=True)
     parser.add_argument('task_id', type=int, required=True)
     parser.add_argument('text', type=str)
-    parser.add_argument('comment_id', type=int)
 
-
-    def get(self):
-        args: dict = self.parser.parse_args()
-        body, status = get_task_details(args)
-        return self.return_json(body, status)
+    edit_parser = reqparse.RequestParser(trim=True)
+    edit_parser.add_argument('text', type=str)
+    edit_parser.add_argument('comment_id', type=int, required=True)
     
     
     def post(self):
@@ -107,14 +131,52 @@ class Comments(_Resource):
     
     
     def put(self):
-        args: dict = self.parser.parse_args()
-        status = change_comment(args)
+        args: dict = self.edit_parser.parse_args()
+        status = edit_comment(args)
+        return self.return_status(status)
+    
+
+    def delete(self):
+        args: dict = self.edit_parser.parse_args()
+        status = delete_comment(args['comment_id'])
         return self.return_status(status)
 
 
-api.add_resource(Tasks, '/tasks')
-api.add_resource(Project, '/projects')
-api.add_resource(Comments, '/comments')
+
+class Sections(_Resource):
+    
+    parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('project_id', type=str, required=True)
+    parser.add_argument('name', type=str, required=True)
+
+    edit_parser = reqparse.RequestParser(trim=True)
+    edit_parser.add_argument('name', type=str)
+    edit_parser.add_argument('section_id', type=str, required=True)
+
+    
+    def post(self):
+        args: dict = self.parser.parse_args()
+        status = create_section(args)
+        return self.return_status(status)
+    
+
+    def put(self):
+        args: dict = self.edit_parser.parse_args()
+        status = edit_section(args)
+        return self.return_status(status)
+    
+
+    def delete(self):
+        args: dict = self.edit_parser.parse_args()
+        status = delete_section(args['section_id'])
+        return self.return_status(status)
+
+
+api.add_resource(Tasks, '/task')
+api.add_resource(ProjectList, '/project_list')
+api.add_resource(Project, '/project')
+api.add_resource(Comments, '/comment')
+api.add_resource(Sections, '/section')
 
 
 if __name__ == '__main__':

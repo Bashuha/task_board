@@ -444,20 +444,17 @@ def get_projects() -> tuple:
     project_dict = dict()
     for proj in project_list:
         custom_project_dict = dict(zip(proj_keys, proj))
+        custom_project_dict['is_favorites'] = bool(custom_project_dict['is_favorites'])
+        custom_project_dict['is_archive'] = bool(custom_project_dict['is_archive'])
+        custom_project_dict['sections'] = list()
+
         project_dict[proj[2]] = custom_project_dict
-
-
-        project_dict[proj[2]]['is_favorites'] = bool(project_dict[proj[2]]['is_favorites'])
-        project_dict[proj[2]]['is_archive'] = bool(project_dict[proj[2]]['is_archive'])
         
-        project_dict[proj[2]]['sections'] = list()
-
     for section in section_list:
         section_dict = dict(zip(section_keys, section))
         project_dict[section_dict['project_id']]['sections'].append(section_dict)
 
-    projects = dict()
-    projects['projects'] = list(project_dict.values())
+    projects = {'projects':list(project_dict.values())}
     return projects, 200
 
 

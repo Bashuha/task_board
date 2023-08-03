@@ -177,7 +177,7 @@ def create_task(args: dict):
         args.pop('project_id')
         args.pop('section_id')
 
-    if not args['section_id']:
+    elif not args.get('section_id'):
         args.pop('section_id')
 
     if not args['description']:
@@ -254,24 +254,31 @@ def get_project_details(args: dict) -> tuple:
     '''
     
     task_select = f'''
-    SELECT  
-        name, 
-        section_id, 
-        id 
-    FROM 
-        `Task` 
-    WHERE 
+    SELECT
+        Task.name,
+        Task.section_id,
+        Task.id,
+        COUNT(Comments.id)
+    FROM
+        `Task`
+    LEFT JOIN `Comments` ON Task.id = Comments.task_id
+    WHERE
+	    %s
+    GROUP BY
+        Task.name,
+        Task.section_id,
+        Task.id 
     '''
     
     section_list = []
     external_tasks = []
-    table_keys = ['name', 'section_id', 'task_id']
+    task_keys = ['name', 'section_id', 'task_id', 'comments_count']
 
     # если указан poject_id, мы проходимся по разделам и задачам
     # если находим совпадения по id раздела, добавляем задачу в список задач этого раздела 
     # если у задачи section_id не указан, мы добавляем ее в список задач ПРОЕКТА вне всех разделов (external_tasks)
     if args['project_id']:
-        task_select += f'project_id = {args["project_id"]}'
+        task_select = task_select % f'project_id = {args["project_id"]}'
         select_sections += f'project_id = {args["project_id"]}'
         sections_data = select(select_sections)
         tasks = select(task_select)
@@ -284,7 +291,7 @@ def get_project_details(args: dict) -> tuple:
                             "tasks":list()
                                }
         for task in tasks:
-            task_dict = dict(zip(table_keys, task))
+            task_dict = dict(zip(task_keys, task))
             if task_dict['section_id']:
                 sections[task_dict.pop('section_id')]["tasks"].append(task_dict)
             elif not task_dict['section_id']:
@@ -295,11 +302,11 @@ def get_project_details(args: dict) -> tuple:
         section_list = list(sections.values())
     
     else:
-        task_select += 'project_id IS NULL'
+        task_select = task_select % 'project_id IS NULL'
         tasks = select(task_select)
 
         for task in tasks:
-            task_dict = dict(zip(table_keys, task))
+            task_dict = dict(zip(task_keys, task))
             task_dict.pop('section_id')
             external_tasks.append(task_dict)
 
@@ -435,7 +442,7 @@ def get_projects() -> tuple:
     ORDER BY 
         Project.id
     '''
-    proj_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count', 'comment_count']
+    proj_keys = ['project_name', 'is_favorites', 'id', 'is_archive' , 'task_count']
     section_keys = ['section_id', 'name', 'project_id']
 
     project_list = select(query_project_list)
@@ -460,12 +467,29 @@ def get_projects() -> tuple:
 
 def archive_project(args: dict) -> tuple:
     
+    query_update = "UPDATE `Project` SET"
+    query_list = list()
+
     check_project = f'SELECT id FROM Project WHERE id = {args["project_id"]}'
     select_id = select(check_project)
     if not select_id:
         return {'message':'Проект не найден'}, 404
 
-    query_update = f'UPDATE `Project` SET is_archive = {int(args["is_archive"])}, is_favorites = 0 WHERE id = {args["project_id"]}'
+    if args['is_archive']:
+        query_update = f'UPDATE `Project` SET is_archive = {int(args["is_archive"])}, is_favorites = 0 WHERE id = {args["project_id"]}'
+        update(query_update)
+        return {'message': "ok"}, 200
+
+    if args['name']:
+        query_list.append(f" name = '{args['name']}'")
+
+    if args['is_favorites']:
+        query_list.append(f" is_favorites = {int(args['is_favorites'])}")
+    else:
+        query_list.append(f" is_favorites = {int(args['is_favorites'])}")
+
+    query_update += ",".join(query_list) + f" WHERE id = {args['project_id']}"
+
     update(query_update)
 
     return {'message': "ok"}, 200

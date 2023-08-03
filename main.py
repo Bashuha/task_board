@@ -82,7 +82,7 @@ class Project(_Resource):
 class Tasks(_Resource):
     
     parser = reqparse.RequestParser(trim=True)
-    parser.add_argument('name', type=str)
+    parser.add_argument('name', type=str, required=True)
     parser.add_argument('description', type=str)
     parser.add_argument('project_id', type=int)
     parser.add_argument('section_id', type=int)

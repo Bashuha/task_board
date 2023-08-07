@@ -479,12 +479,12 @@ def edit_project(args: dict) -> tuple:
         query_list.append(f' is_archive = {int(args["is_archive"])}, is_favorites = 0')
     elif args['is_archive'] != None:
         query_list.append(f" is_archive = {int(args['is_archive'])}")
+        if args['is_favorites'] != None:
+            query_list.append(f" is_favorites = {int(args['is_favorites'])}")
 
     if args['name']:
         query_list.append(f" name = '{args['name']}'")
 
-    if args['is_favorites'] != None and not args['is_archive']:
-        query_list.append(f" is_favorites = {int(args['is_favorites'])}")
 
     query_update += ",".join(query_list) + f" WHERE id = {args['project_id']}"
 

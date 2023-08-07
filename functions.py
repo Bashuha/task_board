@@ -465,7 +465,7 @@ def get_projects() -> tuple:
     return projects, 200
 
 
-def archive_project(args: dict) -> tuple:
+def edit_project(args: dict) -> tuple:
     
     query_update = "UPDATE `Project` SET"
     query_list = list()
@@ -476,16 +476,14 @@ def archive_project(args: dict) -> tuple:
         return {'message':'Проект не найден'}, 404
 
     if args['is_archive']:
-        query_update = f'UPDATE `Project` SET is_archive = {int(args["is_archive"])}, is_favorites = 0 WHERE id = {args["project_id"]}'
-        update(query_update)
-        return {'message': "ok"}, 200
+        query_list.append(f' is_archive = {int(args["is_archive"])}, is_favorites = 0')
+    elif args['is_archive'] != None:
+        query_list.append(f" is_archive = {int(args['is_archive'])}")
 
     if args['name']:
         query_list.append(f" name = '{args['name']}'")
 
-    if args['is_favorites']:
-        query_list.append(f" is_favorites = {int(args['is_favorites'])}")
-    else:
+    if args['is_favorites'] != None and not args['is_archive']:
         query_list.append(f" is_favorites = {int(args['is_favorites'])}")
 
     query_update += ",".join(query_list) + f" WHERE id = {args['project_id']}"

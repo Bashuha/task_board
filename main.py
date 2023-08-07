@@ -71,7 +71,7 @@ class Project(_Resource):
 
     def put(self):
         args: dict = self.edit_parser.parse_args()
-        return self.return_json(*archive_project(args))
+        return self.return_json(*edit_project(args))
     
     
     def delete(self):

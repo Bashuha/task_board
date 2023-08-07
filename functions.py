@@ -23,6 +23,24 @@ def insert(query):
         connection.close()
 
 
+def insert_many(query, arguments):
+    try:
+        with connect(
+            host = MYSQL.get('host'),
+            user = MYSQL.get('user'),
+            password = MYSQL.get('password'),
+            database = MYSQL.get('database')
+        ) as connection:
+            cursor = connection.cursor()
+            cursor.executemany(query, arguments)
+            connection.commit()
+    except Error as e:
+        print(e)
+    finally:
+        cursor.close()
+        connection.close()
+
+
 def update(query):
     try:
         connection = connect(
@@ -279,7 +297,7 @@ def get_project_details(args: dict) -> tuple:
     # если у задачи section_id не указан, мы добавляем ее в список задач ПРОЕКТА вне всех разделов (external_tasks)
     if args['project_id']:
         task_select = task_select % f'project_id = {args["project_id"]}'
-        select_sections += f'project_id = {args["project_id"]}'
+        select_sections += f'project_id = {args["project_id"]} ORDER BY order_number'
         sections_data = select(select_sections)
         tasks = select(task_select)
 
@@ -505,3 +523,30 @@ def delete_from_archive(project_id) -> tuple:
     return {"message": "Проект не в архиве"}, 400
 
 
+def change_section_order(args: dict):
+    query_order = f'SELECT id FROM `Sections` WHERE project_id = {args["project_id"]} ORDER BY order_number'
+    current_order = select(query_order)
+
+    order_list = list()
+    for tuple in current_order:
+        order_list.append(*tuple)
+
+    # if args['id_list'] != order_list:
+    #     for order in enumerate(args['id_list'], start=1):
+    #         query_update = f'UPDATE `Sections` SET order_number = {order[0]} WHERE id = {order[1]}'
+    #         update(query_update)
+
+    if args['id_list'] != order_list:
+        for number, (old, new) in enumerate(zip(order_list, args['id_list']), start=1):
+            if old != new:
+                query_update = f'UPDATE `Sections` SET order_number = {number} WHERE id = {new}'
+                # print("order number " + str(number), "new id " + str(new))
+                # print("old id " + str(old))
+                update(query_update)
+
+    return {'message': "ok"}, 200
+
+list_order = [13, 3, 4]
+args = {'project_id':29, 'id_list':list_order}
+
+change_section_order(args)

@@ -230,10 +230,7 @@ def edit_task(args: dict):
     if args['description'] == "" or args['description']:
         query_list.append(f" description = '{args['description']}'")
     
-    if args['section_id']:
-        query_list.append(f" section_id = {args['section_id']}")
-    else:
-        query_list.append(" section_id = NULL")
+    query_list.append(f" section_id = {args['section_id'] or 'NULL'}")
 
     query_update += ",".join(query_list)
     query_update += f" WHERE id = {args['task_id']}"
@@ -316,8 +313,7 @@ def get_project_details(project_id) -> tuple:
                 sections[task_dict.pop('section_id')]["tasks"].append(task_dict)
             elif not task_dict['section_id']:
                 task_dict.pop('section_id')
-                if task_dict not in external_tasks:
-                    external_tasks.append(task_dict)
+                external_tasks.append(task_dict)
     
         section_list = list(sections.values())
     
@@ -527,19 +523,14 @@ def delete_from_archive(project_id) -> tuple:
 
 def change_section_order(args: dict):
     query_order = f'SELECT id FROM `Sections` WHERE project_id = {args["project_id"]} ORDER BY order_number'
-    current_order = select(query_order)
+    current_list_order = select(query_order)
 
-    current_list_order = list()
-    for tuple in current_order:
-        current_list_order.append(*tuple)
+    new_list_order = args['sections']
+  
+    for number, (old, new) in enumerate(zip(current_list_order, new_list_order), start=1):
+        if old[0] != new['id']:
+            query_update = f'UPDATE `Sections` SET order_number = {number} WHERE id = {new["id"]}'
+            update(query_update)
 
-    section_list = args['sections']
-    new_list_order = list(map(lambda object: object.get('id'), section_list))
-
-    if new_list_order != current_list_order:
-        for number, (old, new) in enumerate(zip(current_list_order, new_list_order), start=1):
-            if old != new:
-                query_update = f'UPDATE `Sections` SET order_number = {number} WHERE id = {new}'
-                update(query_update)
 
     return 200

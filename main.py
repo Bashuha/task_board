@@ -49,7 +49,6 @@ class Project(_Resource):
     parser = reqparse.RequestParser(trim=True)
     parser.add_argument('name', type=str)
     parser.add_argument('is_favorites', type=ParseBool)
-    parser.add_argument('project_id', type=int)
 
     edit_parser = reqparse.RequestParser(trim=True)
     edit_parser.add_argument('project_id', type=int, required=True)
@@ -59,8 +58,8 @@ class Project(_Resource):
 
 
     def get(self):
-        args: dict = self.parser.parse_args()
-        body, status = get_project_details(args)
+        args: dict = self.edit_parser.parse_args()
+        body, status = get_project_details(args['project_id'])
         return self.return_json(body, status)
 
 

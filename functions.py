@@ -243,7 +243,7 @@ def edit_task(args: dict):
     return {"message": "ok"}, 200
 
 
-def get_project_details(args: dict) -> tuple:
+def get_project_details(project_id) -> tuple:
 
     select_project_info = f'''
     SELECT 
@@ -252,11 +252,11 @@ def get_project_details(args: dict) -> tuple:
     FROM 
         `Project`
     WHERE 
-        id = {args['project_id']}
+        id = {project_id}
     '''
 
     project_data = None
-    if args['project_id']:
+    if project_id:
         project_data = select(select_project_info)
         if project_data:
             project_data = project_data[0][0]
@@ -297,9 +297,9 @@ def get_project_details(args: dict) -> tuple:
     # если указан poject_id, мы проходимся по разделам и задачам
     # если находим совпадения по id раздела, добавляем задачу в список задач этого раздела 
     # если у задачи section_id не указан, мы добавляем ее в список задач ПРОЕКТА вне всех разделов (external_tasks)
-    if args['project_id']:
-        task_select = task_select % f'project_id = {args["project_id"]}'
-        select_sections += f'project_id = {args["project_id"]} ORDER BY order_number'
+    if project_id:
+        task_select = task_select % f'project_id = {project_id}'
+        select_sections += f'project_id = {project_id} ORDER BY order_number'
         sections_data = select(select_sections)
         tasks = select(task_select)
 
@@ -331,7 +331,7 @@ def get_project_details(args: dict) -> tuple:
             external_tasks.append(task_dict)
 
     final_result = {'project_name': project_data or 'Входящие', 
-                    'project_id': args['project_id'],
+                    'project_id': project_id,
                     'tasks': external_tasks,  
                     'sections': section_list}
 

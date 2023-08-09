@@ -12,13 +12,13 @@ def db_connection():
         password = MYSQL.get('password'),
         database = MYSQL.get('database')
     )
-    cursor = connection.cursor()
-    return connection, cursor
+    return connection
 
 
 def insert(query):
     try:
-        connection, cursor = db_connection()
+        connection = db_connection()
+        cursor = connection.cursor()
         cursor.execute(query)
         connection.commit()
     except Error as e:
@@ -30,7 +30,8 @@ def insert(query):
 
 def update(query):
     try:
-        connection, cursor = db_connection()
+        connection = db_connection()
+        cursor = connection.cursor()
         cursor.execute(query)
         connection.commit()
     except Error as e:
@@ -42,7 +43,8 @@ def update(query):
 
 def delete(query):
     try:
-        connection, cursor = db_connection()
+        connection = db_connection()
+        cursor = connection.cursor()
         cursor.execute(query)
         connection.commit()
     except Error as e:
@@ -54,7 +56,8 @@ def delete(query):
 
 def select(query):
     try:
-        connection, cursor = db_connection()
+        connection = db_connection()
+        cursor = connection.cursor()
         cursor.execute(query)
         return cursor.fetchall()
     except Error as e:

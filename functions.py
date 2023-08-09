@@ -2,38 +2,25 @@ from mysql.connector import connect, Error
 from config import MYSQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-import json
+
+
+
+def db_connection():
+    connection = connect(
+        host = MYSQL.get('host'),
+        user = MYSQL.get('user'),
+        password = MYSQL.get('password'),
+        database = MYSQL.get('database')
+    )
+    cursor = connection.cursor()
+    return connection, cursor
 
 
 def insert(query):
     try:
-        with connect(
-            host = MYSQL.get('host'),
-            user = MYSQL.get('user'),
-            password = MYSQL.get('password'),
-            database = MYSQL.get('database')
-        ) as connection:
-            cursor = connection.cursor()
-            cursor.execute(query)
-            connection.commit()
-    except Error as e:
-        print(e)
-    finally:
-        cursor.close()
-        connection.close()
-
-
-def insert_many(query, arguments):
-    try:
-        with connect(
-            host = MYSQL.get('host'),
-            user = MYSQL.get('user'),
-            password = MYSQL.get('password'),
-            database = MYSQL.get('database')
-        ) as connection:
-            cursor = connection.cursor()
-            cursor.executemany(query, arguments)
-            connection.commit()
+        connection, cursor = db_connection()
+        cursor.execute(query)
+        connection.commit()
     except Error as e:
         print(e)
     finally:
@@ -43,13 +30,7 @@ def insert_many(query, arguments):
 
 def update(query):
     try:
-        connection = connect(
-            host = MYSQL.get('host'),
-            user = MYSQL.get('user'),
-            password = MYSQL.get('password'),
-            database = MYSQL.get('database')
-        )
-        cursor = connection.cursor()
+        connection, cursor = db_connection()
         cursor.execute(query)
         connection.commit()
     except Error as e:
@@ -61,13 +42,7 @@ def update(query):
 
 def delete(query):
     try:
-        connection = connect(
-            host = MYSQL.get('host'),
-            user = MYSQL.get('user'),
-            password = MYSQL.get('password'),
-            database = MYSQL.get('database')
-        )
-        cursor = connection.cursor()
+        connection, cursor = db_connection()
         cursor.execute(query)
         connection.commit()
     except Error as e:
@@ -79,15 +54,9 @@ def delete(query):
 
 def select(query):
     try:
-        with connect(
-            host = MYSQL.get('host'),
-            user = MYSQL.get('user'),
-            password = MYSQL.get('password'),
-            database = MYSQL.get('database')
-        ) as connection:
-            cursor = connection.cursor()
-            cursor.execute(query)
-            return cursor.fetchall()
+        connection, cursor = db_connection()
+        cursor.execute(query)
+        return cursor.fetchall()
     except Error as e:
         print(e)
     finally:

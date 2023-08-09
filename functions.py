@@ -2,20 +2,25 @@ from mysql.connector import connect, Error
 from config import MYSQL
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
-import json
+
+
+
+def db_connection():
+    connection = connect(
+        host = MYSQL.get('host'),
+        user = MYSQL.get('user'),
+        password = MYSQL.get('password'),
+        database = MYSQL.get('database')
+    )
+    return connection
 
 
 def insert(query):
     try:
-        with connect(
-            host = MYSQL.get('host'),
-            user = MYSQL.get('user'),
-            password = MYSQL.get('password'),
-            database = MYSQL.get('database')
-        ) as connection:
-            cursor = connection.cursor()
-            cursor.execute(query)
-            connection.commit()
+        connection = db_connection()
+        cursor = connection.cursor()
+        cursor.execute(query)
+        connection.commit()
     except Error as e:
         print(e)
     finally:
@@ -25,12 +30,7 @@ def insert(query):
 
 def update(query):
     try:
-        connection = connect(
-            host = MYSQL.get('host'),
-            user = MYSQL.get('user'),
-            password = MYSQL.get('password'),
-            database = MYSQL.get('database')
-        )
+        connection = db_connection()
         cursor = connection.cursor()
         cursor.execute(query)
         connection.commit()
@@ -43,12 +43,7 @@ def update(query):
 
 def delete(query):
     try:
-        connection = connect(
-            host = MYSQL.get('host'),
-            user = MYSQL.get('user'),
-            password = MYSQL.get('password'),
-            database = MYSQL.get('database')
-        )
+        connection = db_connection()
         cursor = connection.cursor()
         cursor.execute(query)
         connection.commit()
@@ -61,15 +56,10 @@ def delete(query):
 
 def select(query):
     try:
-        with connect(
-            host = MYSQL.get('host'),
-            user = MYSQL.get('user'),
-            password = MYSQL.get('password'),
-            database = MYSQL.get('database')
-        ) as connection:
-            cursor = connection.cursor()
-            cursor.execute(query)
-            return cursor.fetchall()
+        connection = db_connection()
+        cursor = connection.cursor()
+        cursor.execute(query)
+        return cursor.fetchall()
     except Error as e:
         print(e)
     finally:
@@ -212,8 +202,7 @@ def edit_task(args: dict):
     if args['description'] == "" or args['description']:
         query_list.append(f" description = '{args['description']}'")
     
-    if args['section_id']:
-        query_list.append(f" section_id = {args['section_id']}")
+    query_list.append(f" section_id = {args['section_id'] or 'NULL'}")
 
     query_update += ",".join(query_list)
     query_update += f" WHERE id = {args['task_id']}"
@@ -223,7 +212,7 @@ def edit_task(args: dict):
     return {"message": "ok"}, 200
 
 
-def get_project_details(args: dict) -> tuple:
+def get_project_details(project_id) -> tuple:
 
     select_project_info = f'''
     SELECT 
@@ -232,11 +221,11 @@ def get_project_details(args: dict) -> tuple:
     FROM 
         `Project`
     WHERE 
-        id = {args['project_id']}
+        id = {project_id}
     '''
 
     project_data = None
-    if args['project_id']:
+    if project_id:
         project_data = select(select_project_info)
         if project_data:
             project_data = project_data[0][0]
@@ -277,9 +266,9 @@ def get_project_details(args: dict) -> tuple:
     # если указан poject_id, мы проходимся по разделам и задачам
     # если находим совпадения по id раздела, добавляем задачу в список задач этого раздела 
     # если у задачи section_id не указан, мы добавляем ее в список задач ПРОЕКТА вне всех разделов (external_tasks)
-    if args['project_id']:
-        task_select = task_select % f'project_id = {args["project_id"]}'
-        select_sections += f'project_id = {args["project_id"]}'
+    if project_id:
+        task_select = task_select % f'project_id = {project_id}'
+        select_sections += f'project_id = {project_id} ORDER BY order_number'
         sections_data = select(select_sections)
         tasks = select(task_select)
 
@@ -296,8 +285,7 @@ def get_project_details(args: dict) -> tuple:
                 sections[task_dict.pop('section_id')]["tasks"].append(task_dict)
             elif not task_dict['section_id']:
                 task_dict.pop('section_id')
-                if task_dict not in external_tasks:
-                    external_tasks.append(task_dict)
+                external_tasks.append(task_dict)
     
         section_list = list(sections.values())
     
@@ -311,7 +299,7 @@ def get_project_details(args: dict) -> tuple:
             external_tasks.append(task_dict)
 
     final_result = {'project_name': project_data or 'Входящие', 
-                    'project_id': args['project_id'],
+                    'project_id': project_id,
                     'tasks': external_tasks,  
                     'sections': section_list}
 
@@ -505,3 +493,16 @@ def delete_from_archive(project_id) -> tuple:
     return {"message": "Проект не в архиве"}, 400
 
 
+def change_section_order(args: dict):
+    query_order = f'SELECT id FROM `Sections` WHERE project_id = {args["project_id"]} ORDER BY order_number'
+    current_list_order = select(query_order)
+
+    new_list_order = args['sections']
+  
+    for number, (old, new) in enumerate(zip(current_list_order, new_list_order), start=1):
+        if old[0] != new['id']:
+            query_update = f'UPDATE `Sections` SET order_number = {number} WHERE id = {new["id"]}'
+            update(query_update)
+
+
+    return 200

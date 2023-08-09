@@ -146,12 +146,12 @@ class Comments(_Resource):
 class Sections(_Resource):
     
     parser = reqparse.RequestParser(trim=True)
-    parser.add_argument('project_id', type=str, required=True)
+    parser.add_argument('project_id', type=int, required=True)
     parser.add_argument('name', type=str, required=True)
 
     edit_parser = reqparse.RequestParser(trim=True)
     edit_parser.add_argument('name', type=str)
-    edit_parser.add_argument('section_id', type=str, required=True)
+    edit_parser.add_argument('section_id', type=int, required=True)
 
     
     def post(self):
@@ -170,6 +170,19 @@ class Sections(_Resource):
         args: dict = self.edit_parser.parse_args()
         status = delete_section(args['section_id'])
         return self.return_status(status)
+    
+
+class ChangeSectionOrder(_Resource):
+
+    parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('project_id', type=int, required=True)
+    parser.add_argument('sections', type=dict, action='append')
+
+    def put(self):
+        args: dict = self.parser.parse_args()
+        status = change_section_order(args)
+        return self.return_status(status)
+    
 
 
 api.add_resource(Tasks, '/task')
@@ -177,6 +190,7 @@ api.add_resource(ProjectList, '/project_list')
 api.add_resource(Project, '/project')
 api.add_resource(Comments, '/comment')
 api.add_resource(Sections, '/section')
+api.add_resource(ChangeSectionOrder, '/section_order')
 
 
 if __name__ == '__main__':

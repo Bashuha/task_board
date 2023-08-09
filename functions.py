@@ -232,6 +232,8 @@ def edit_task(args: dict):
     
     if args['section_id']:
         query_list.append(f" section_id = {args['section_id']}")
+    else:
+        query_list.append(" section_id = NULL")
 
     query_update += ",".join(query_list)
     query_update += f" WHERE id = {args['task_id']}"
@@ -527,26 +529,17 @@ def change_section_order(args: dict):
     query_order = f'SELECT id FROM `Sections` WHERE project_id = {args["project_id"]} ORDER BY order_number'
     current_order = select(query_order)
 
-    order_list = list()
+    current_list_order = list()
     for tuple in current_order:
-        order_list.append(*tuple)
+        current_list_order.append(*tuple)
 
-    # if args['id_list'] != order_list:
-    #     for order in enumerate(args['id_list'], start=1):
-    #         query_update = f'UPDATE `Sections` SET order_number = {order[0]} WHERE id = {order[1]}'
-    #         update(query_update)
+    section_list = args['sections']
+    new_list_order = list(map(lambda object: object.get('id'), section_list))
 
-    if args['id_list'] != order_list:
-        for number, (old, new) in enumerate(zip(order_list, args['id_list']), start=1):
+    if new_list_order != current_list_order:
+        for number, (old, new) in enumerate(zip(current_list_order, new_list_order), start=1):
             if old != new:
                 query_update = f'UPDATE `Sections` SET order_number = {number} WHERE id = {new}'
-                # print("order number " + str(number), "new id " + str(new))
-                # print("old id " + str(old))
                 update(query_update)
 
-    return {'message': "ok"}, 200
-
-list_order = [13, 3, 4]
-args = {'project_id':29, 'id_list':list_order}
-
-change_section_order(args)
+    return 200

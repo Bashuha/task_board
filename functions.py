@@ -212,6 +212,20 @@ def edit_task(args: dict):
     return {"message": "ok"}, 200
 
 
+def delete_task(task_id):
+    query_delete = f'''
+    DELETE
+    FROM 
+        `Task` 
+    WHERE 
+        id = {task_id}
+    '''
+    delete(query_delete)
+
+    return 200
+
+
+
 def get_project_details(project_id) -> tuple:
 
     select_project_info = f'''

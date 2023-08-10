@@ -198,24 +198,37 @@
 Ответ
 ```json
 {
-    "project_name": "tomatos",
-    "project_id": 7,
-    "tasks": [
-        {
-            "name": "Тест создания задачи без раздела",
-            "task_id": 65
-        }
-    ],
+    "is_favorites": true,
+    "project_id": 29,
+    "project_name": "Нужно больше кельвинов",
     "sections": [
         {
-            "id": 9,
-            "name": "Тест создания раздела",
+            "id": 3,
+            "name": "Раздел Артема и Кельвина",
+            "tasks": []
+        },
+        {
+            "id": 4,
+            "name": "Измененное имя раздела",
             "tasks": [
                 {
-                    "name": "Тест создания задачи",
-                    "task_id": 64
+                    "comments_count": 0,
+                    "name": "Artem loves kelvin",
+                    "task_id": 40
                 }
             ]
+        },
+        {
+            "id": 13,
+            "name": "Тестим порядок разделов 1",
+            "tasks": []
+        }
+    ],
+    "tasks": [
+        {
+            "comments_count": 2,
+            "name": "Kelvin loves Artem",
+            "task_id": 41
         }
     ]
 }

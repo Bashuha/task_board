@@ -110,6 +110,12 @@ class Tasks(_Resource):
         args: dict = self.edit_parser.parse_args()
         body, status = edit_task(args)
         return self.return_json(body, status)
+    
+
+    def delete(self):
+        args: dict = self.edit_parser.parse_args()
+        status = delete_task(args['task_id'])
+        return self.return_status(status)
 
 
 class Comments(_Resource):

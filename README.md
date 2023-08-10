@@ -192,7 +192,7 @@
 ```
 Полный пример: 
 
-*/to_do_list/project?project_id=32*
+*/to_do_list/project?project_id=29*
 * Статус 200
 
 Ответ

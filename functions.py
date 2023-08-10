@@ -217,7 +217,7 @@ def get_project_details(project_id) -> tuple:
     select_project_info = f'''
     SELECT 
         name, 
-        id 
+        is_favorites 
     FROM 
         `Project`
     WHERE 
@@ -228,7 +228,8 @@ def get_project_details(project_id) -> tuple:
     if project_id:
         project_data = select(select_project_info)
         if project_data:
-            project_data = project_data[0][0]
+            favorite_status = bool(project_data[0][1])
+            project_name = project_data[0][0]
         else:
             return {'message': 'Проект не найден'}, 404
 
@@ -298,8 +299,9 @@ def get_project_details(project_id) -> tuple:
             task_dict.pop('section_id')
             external_tasks.append(task_dict)
 
-    final_result = {'project_name': project_data or 'Входящие', 
+    final_result = {'project_name': project_name or 'Входящие', 
                     'project_id': project_id,
+                    'is_favorites': favorite_status,
                     'tasks': external_tasks,  
                     'sections': section_list}
 

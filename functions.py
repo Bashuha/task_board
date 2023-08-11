@@ -496,8 +496,10 @@ def edit_project(args: dict) -> tuple:
 
 
 def change_archive_status(args: dict) -> tuple:
-
-    query_update = f"UPDATE `Project` SET is_archive = {int(args['is_archive'])} WHERE id = {args['project_id']}" 
+    if args['is_archive']:
+        query_update = f"UPDATE `Project` SET is_archive = {int(args['is_archive'])}, is_favorites = 0 WHERE id = {args['project_id']}"
+    else:
+        query_update = f"UPDATE `Project` SET is_archive = {int(args['is_archive'])} WHERE id = {args['project_id']}" 
 
     update(query_update)
 

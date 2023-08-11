@@ -54,7 +54,6 @@ class Project(_Resource):
     edit_parser.add_argument('project_id', type=int, required=True)
     edit_parser.add_argument('is_favorites', type=ParseBool)
     edit_parser.add_argument('name', type=str)
-    edit_parser.add_argument('is_archive', type=ParseBool)
 
 
     def get(self):
@@ -189,6 +188,17 @@ class ChangeSectionOrder(_Resource):
         return self.return_status(status)
     
 
+class ChangeArchiveStatus(_Resource):
+
+    parser = reqparse.RequestParser(trim=True)
+    parser.add_argument('project_id', type=int, required=True)
+    parser.add_argument('is_archive', type=ParseBool, required=True)
+    
+    def put(self):
+        args: dict = self.parser.parse_args()
+        status = change_archive_status(args)
+        return self.return_status(status)
+
 
 api.add_resource(Tasks, '/task')
 api.add_resource(ProjectList, '/project_list')
@@ -196,6 +206,7 @@ api.add_resource(Project, '/project')
 api.add_resource(Comments, '/comment')
 api.add_resource(Sections, '/section')
 api.add_resource(ChangeSectionOrder, '/section_order')
+api.add_resource(ChangeArchiveStatus, '/change_archive_status')
 
 
 if __name__ == '__main__':

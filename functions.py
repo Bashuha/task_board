@@ -474,17 +474,15 @@ def edit_project(args: dict) -> tuple:
     query_update = "UPDATE `Project` SET"
     query_list = list()
 
-    check_project = f'SELECT id FROM Project WHERE id = {args["project_id"]}'
-    select_id = select(check_project)
-    if not select_id:
+    select_proj_data = f'SELECT id, is_archive FROM Project WHERE id = {args["project_id"]}'
+    check_project = select(select_proj_data)
+    if not check_project:
         return {'message':'Проект не найден'}, 404
+    if check_project[0][1]:
+        return {'message':'Проект в архиве нельзя редактировать'}, 400
 
-    if args['is_archive']:
-        query_list.append(f' is_archive = {int(args["is_archive"])}, is_favorites = 0')
-    elif args['is_archive'] != None:
-        query_list.append(f" is_archive = {int(args['is_archive'])}")
-        if args['is_favorites'] != None:
-            query_list.append(f" is_favorites = {int(args['is_favorites'])}")
+    if args['is_favorites'] != None:
+        query_list.append(f" is_favorites = {int(args['is_favorites'])}")
 
     if args['name']:
         query_list.append(f" name = '{args['name']}'")
@@ -496,7 +494,15 @@ def edit_project(args: dict) -> tuple:
 
     return {'message': "ok"}, 200
 
-    
+
+def change_archive_status(args: dict) -> tuple:
+
+    query_update = f"UPDATE `Project` SET is_archive = {int(args['is_archive'])} WHERE id = {args['project_id']}" 
+
+    update(query_update)
+
+    return 200
+
 
 def delete_from_archive(project_id) -> tuple:
     query_select = f'SELECT id FROM `Project` WHERE is_archive = 1 AND id = {project_id}'    

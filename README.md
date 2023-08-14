@@ -210,37 +210,56 @@
 Ответ
 ```json
 {
-    "is_favorites": true,
-    "project_id": 29,
-    "project_name": "Нужно больше кельвинов",
+    "is_favorites": false,
+    "project_id": 32,
+    "project_name": "New archive name",
     "sections": [
         {
-            "id": 3,
-            "name": "Раздел Артема и Кельвина",
-            "tasks": []
-        },
-        {
-            "id": 4,
-            "name": "Измененное имя раздела",
+            "id": 7,
+            "name": "Раздел для теста 1",
             "tasks": [
                 {
+                    "comments_count": 2,
+                    "description": "Тут совершенно не обязательно что-то писать",
+                    "name": "Задача для теста",
+                    "task_id": 55
+                },
+                {
                     "comments_count": 0,
-                    "name": "Artem loves kelvin",
-                    "task_id": 40
+                    "description": "Новое описание",
+                    "name": "Измененное название задачи",
+                    "task_id": 61
                 }
             ]
         },
         {
-            "id": 13,
-            "name": "Тестим порядок разделов 1",
+            "id": 16,
+            "name": "Test order number",
+            "tasks": []
+        },
+        {
+            "id": 11,
+            "name": "Тест создания второго раздела",
+            "tasks": []
+        },
+        {
+            "id": 12,
+            "name": "",
             "tasks": []
         }
     ],
     "tasks": [
         {
-            "comments_count": 2,
-            "name": "Kelvin loves Artem",
-            "task_id": 41
+            "comments_count": 0,
+            "description": "Тут совершенно не обязательно что-то писать",
+            "name": "Задача без раздела",
+            "task_id": 54
+        },
+        {
+            "comments_count": 0,
+            "description": "Тут совершенно не обязательно что-то писать",
+            "name": "Еще одна такая же",
+            "task_id": 62
         }
     ]
 }

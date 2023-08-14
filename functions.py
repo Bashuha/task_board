@@ -262,6 +262,7 @@ def get_project_details(project_id) -> tuple:
         Task.name,
         Task.section_id,
         Task.id,
+        Task.description, 
         COUNT(Comments.id)
     FROM
         `Task`
@@ -271,12 +272,13 @@ def get_project_details(project_id) -> tuple:
     GROUP BY
         Task.name,
         Task.section_id,
-        Task.id 
+        Task.id, 
+        Task.description
     '''
     
     section_list = []
     external_tasks = []
-    task_keys = ['name', 'section_id', 'task_id', 'comments_count']
+    task_keys = ['name', 'section_id', 'task_id', 'description', 'comments_count']
 
     # если указан poject_id, мы проходимся по разделам и задачам
     # если находим совпадения по id раздела, добавляем задачу в список задач этого раздела 
@@ -323,6 +325,10 @@ def get_project_details(project_id) -> tuple:
 
 
 def create_section(args: dict):
+
+    query_sections = f'SELECT MAX(order_number) FROM `Sections` WHERE project_id = {args["project_id"]} GROUP BY project_id'
+    max_order_number = select(query_sections)
+    args['order_number'] = max_order_number[0][0] + 1 if max_order_number else 1
 
     values = tuple(args.values())
     query_insert = f'INSERT INTO `Sections` {tuple(args)} VALUES '

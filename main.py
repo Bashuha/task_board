@@ -91,6 +91,7 @@ class Tasks(_Resource):
     edit_parser.add_argument('description', type=str)
     edit_parser.add_argument('project_id', type=int)
     edit_parser.add_argument('section_id', type=int)
+    edit_parser.add_argument('status', type=ParseBool)
 
     
     def post(self):

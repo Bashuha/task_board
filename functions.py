@@ -112,8 +112,9 @@ def get_task_details(task_id) -> tuple:
         Task.id, 
         Task.owner, 
         Task.description, 
-        Task.create_date,
-        Task.section_id 
+        Task.create_date, 
+        Task.section_id, 
+        Task.status 
     FROM 
         `Task` 
     LEFT JOIN 
@@ -137,27 +138,28 @@ def get_task_details(task_id) -> tuple:
 
 
     # создаем два списка ключей для дальнейшего преобразования в словари
-    table_keys = ['login', 'create_at', 'text', 'id']
+    comment_table_keys = ['login', 'create_at', 'text', 'id']
+    task_table_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date', 'section_id', 'status']
     
-    project_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date', 'section_id']
     task_info = select(select_task_info)
-    comments_to_send = dict(zip(project_keys, task_info[0]))
-    
+    dict_task_details = dict(zip(task_table_keys, task_info[0]))
+    dict_task_details['status'] = bool(dict_task_details['status'])
+
     # делаем запрос в таблицу для получения комментов и из каждой строки создаем словарь для отправки на фронт
     # словари в свою очередь добавляем в список comment_list
     tasks_comments = select(select_comments)
     comment_list = []
     for comment in tasks_comments:
-        dict_to_append = dict(zip(table_keys, comment))
+        dict_to_append = dict(zip(comment_table_keys, comment))
         dict_to_append['create_at'] = dict_to_append['create_at'].strftime(('%Y-%m-%d'))
         comment_list.append(dict_to_append)
 
-    comments_to_send['comments'] = comment_list
-    comments_to_send['project_name'] = comments_to_send['project_name'] or 'Входящие'
+    dict_task_details['comments'] = comment_list
+    dict_task_details['project_name'] = dict_task_details['project_name'] or 'Входящие'
     
-    comments_to_send['create_date'] = comments_to_send['create_date'].strftime(('%Y-%m-%d'))
+    dict_task_details['create_date'] = dict_task_details['create_date'].strftime(('%Y-%m-%d'))
 
-    return comments_to_send, 200
+    return dict_task_details, 200
 
 
 def create_task(args: dict):
@@ -201,6 +203,9 @@ def edit_task(args: dict):
 
     if args['description'] == "" or args['description']:
         query_list.append(f" description = '{args['description']}'")
+
+    if args['status'] or args['status'] != None:
+        query_list.append(f" status = '{int(args['status'])}'")
     
     query_list.append(f" section_id = {args['section_id'] or 'NULL'}")
 
@@ -263,6 +268,7 @@ def get_project_details(project_id) -> tuple:
         Task.section_id,
         Task.id,
         Task.description, 
+        Task.status, 
         COUNT(Comments.id)
     FROM
         `Task`
@@ -271,14 +277,15 @@ def get_project_details(project_id) -> tuple:
 	    %s
     GROUP BY
         Task.name,
-        Task.section_id,
+        Task.section_id, 
         Task.id, 
-        Task.description
+        Task.description, 
+        Task.status
     '''
     
     section_list = []
     external_tasks = []
-    task_keys = ['name', 'section_id', 'task_id', 'description', 'comments_count']
+    task_keys = ['name', 'section_id', 'task_id', 'description', 'status', 'comments_count']
 
     # если указан poject_id, мы проходимся по разделам и задачам
     # если находим совпадения по id раздела, добавляем задачу в список задач этого раздела 
@@ -298,6 +305,7 @@ def get_project_details(project_id) -> tuple:
                                }
         for task in tasks:
             task_dict = dict(zip(task_keys, task))
+            task_dict['status'] = bool(task_dict['status'])
             if task_dict['section_id']:
                 sections[task_dict.pop('section_id')]["tasks"].append(task_dict)
             elif not task_dict['section_id']:

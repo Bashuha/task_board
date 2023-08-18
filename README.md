@@ -204,7 +204,7 @@
 ```
 Полный пример: 
 
-*/to_do_list/project?project_id=29*
+*/to_do_list/project?project_id=32*
 * Статус 200
 
 Ответ
@@ -222,12 +222,14 @@
                     "comments_count": 2,
                     "description": "Тут совершенно не обязательно что-то писать",
                     "name": "Задача для теста",
+                    "status": true,
                     "task_id": 55
                 },
                 {
                     "comments_count": 0,
                     "description": "Новое описание",
                     "name": "Измененное название задачи",
+                    "status": true,
                     "task_id": 61
                 }
             ]
@@ -253,12 +255,14 @@
             "comments_count": 0,
             "description": "Тут совершенно не обязательно что-то писать",
             "name": "Задача без раздела",
+            "status": true,
             "task_id": 54
         },
         {
             "comments_count": 0,
             "description": "Тут совершенно не обязательно что-то писать",
             "name": "Еще одна такая же",
+            "status": true,
             "task_id": 62
         }
     ]
@@ -353,29 +357,30 @@
 ```
 Полный пример: 
 
-*/to_do_list/task?task_id=57*
+*/to_do_list/task?task_id=60*
 
 * Статус 200
 
 Ответ
 ```json
 {
-    "project_name": "Пожалуйста, работай",
-    "project_id": 32,
-    "task_name": "Задача для теста 2",
-    "task_id": 56,
-    "task_owner": "Ilusha Tester",
-    "description": "Тут совершенно не обязательно что-то писать",
-    "create_date": "2023-07-31",
-    "section_id": 8,
     "comments": [
         {
+            "create_at": "2023-08-15",
+            "id": 34,
             "login": "Ilusha Tester",
-            "create_at": "2023-07-31",
-            "text": "Коммент для теста",
-            "id": 21
+            "text": "и без проекта"
         }
-    ]
+    ],
+    "create_date": "2023-07-31",
+    "description": "new_description_text",
+    "project_id": 7,
+    "project_name": "cucmbers",
+    "section_id": 9,
+    "status": true,
+    "task_id": 60,
+    "task_name": "new_task_name",
+    "task_owner": "Ilusha Tester"
 }
 ```
 

@@ -114,6 +114,7 @@ def get_task_details(task_id) -> tuple:
         Task.description, 
         Task.create_date, 
         Task.section_id, 
+        Sections.name, 
         Task.status 
     FROM 
         `Task` 
@@ -121,6 +122,9 @@ def get_task_details(task_id) -> tuple:
         `Project` 
     ON 
         Project.id = Task.project_id 
+    LEFT JOIN
+    	`Sections`
+    ON Sections.id = Task.section_id
     WHERE 
         Task.id = {task_id}'''
     
@@ -139,7 +143,7 @@ def get_task_details(task_id) -> tuple:
 
     # создаем два списка ключей для дальнейшего преобразования в словари
     comment_table_keys = ['login', 'create_at', 'text', 'id']
-    task_table_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date', 'section_id', 'status']
+    task_table_keys = ['project_name', 'project_id', 'task_name', 'task_id', 'task_owner', 'description', 'create_date', 'section_id', 'section_name', 'status']
     
     task_info = select(select_task_info)
     dict_task_details = dict(zip(task_table_keys, task_info[0]))

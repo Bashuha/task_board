@@ -352,7 +352,7 @@
 * Параментры получения детализации:
 ```json
 {
-    "task_id":35
+    "task_id":60
 }
 ```
 Полный пример: 
@@ -377,6 +377,7 @@
     "project_id": 7,
     "project_name": "cucmbers",
     "section_id": 9,
+    "section_name": null,
     "status": true,
     "task_id": 60,
     "task_name": "new_task_name",

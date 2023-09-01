@@ -1,6 +1,6 @@
 from models import *
 from my_engine import Session
-from sqlalchemy import update, select
+from sqlalchemy import update, select, delete
 from pprint import pprint
 
 
@@ -77,6 +77,13 @@ def get_projects():
     return project_list, 200
 
 
+def create_project(args: dict):
+
+    with Session() as session:
+        pass
+
+
+
 def get_task_details(task_id):
 
     with Session() as session:
@@ -113,39 +120,62 @@ def get_task_details(task_id):
 def create_task(args: dict):
     args['owner'] = "Alchemy Ilusha"
     with Session() as session:
-        projects_id: list = session.scalars(select(Project.id)).all()
-        # сначала берем список, где id всех существующих проектов
-        # потом проверяем наличие переданного id в нашем списке
-        # добавляем в бд только если id проекта есть в нашем списке 
-        # или если переданный id == None (это для "входящих" задач)
-        if args['project_id'] in projects_id or not args['project_id']:
-            # если переданный id == None, у задачи не может быть раздела
-            # на всякий случай перезаписываем ключ, отвечающий за привязку задачи к разделу 
-            if not args["project_id"]:
-                args["section_id"] = None
-            session.add(Task(**args))
-            session.commit()
+        # если нам передали id раздела, то project_id мы подставляем сами
+        if args.get('section_id'):
+            section: Sections = session.get(Sections, args['section_id'])
+            if section:
+                args["project_id"] = section.project_id
+            else:
+                {'message': 'Проект не найден'}, 404
+        # если передали только project_id, то мы просто проверяем его наличие
+        elif args.get('project_id'):
+            project: Project = session.get(Project, args['project_id'])
+            if not project:
+                return {'message': 'Проект не найден'}, 404
+           
+        session.add(Task(**args))
+        session.commit()
 
-    return 200
+    return {"message": "ok"}, 200
 
 
 def edit_task(args: dict):
     with Session() as session:
         task: Task = session.get(Task, args['task_id'])
-        sections: list = session.query(Sections)
-        sections_id = [sec_id._asdict()['id'] for sec_id in sections]
-        projects_id = [proj_id._asdict()['project_id'] for proj_id in sections]
-        for key, value in args.items():
-            if key == "section_id" and value not in sections_id:
+        # если нам передают id раздела, то id проекта мы присваиваем сами
+        if args.get('section_id'):
+            # обработка идет только в случае если передали не None
+            # в таком случае мы обращаемся к указанному разделу и берем оттуда id проекта
+            section: Sections = session.get(Sections, args['section_id'])
+            if section:
+                args["project_id"] = section.project_id
+            # если запрос вернул None, значит такого раздела в базе нет
+            else:
                 return {"message": "Раздел не найден"}, 404
-            if key == "project_id" and value not in projects_id:
+        # если id раздела не передают, то нужно проверить существование переданного проекта
+        elif args.get('project_id'):
+            project: Project = session.get(Project, args['project_id'])
+            # если такой проект есть, то по умолчанию переносить задачу вне разделов
+            if project:
+                args['section_id'] = None
+            else:
                 return {"message": "Проект не найден"}, 404
+        # далее просто обновляем все данные в объекте Task и комитим
+        for key, value in args.items():
             if key != 'task_id':
                 exec('task.%s = value' % key)
 
         session.commit()
+
     return {"message": "ok"}, 200
 
+
+def delete_task(task_id):
+    with Session() as session:
+        session.execute(delete(Task).where(Task.id == task_id))
+        session.commit()
+
+    return 200
 
 
 
@@ -155,5 +185,5 @@ test_dict = {
 }
 
 # pprint(get_task_details(88))
-pprint(edit_task(test_dict))
+# pprint(edit_task(test_dict))
 # pprint(get_project_details(32))

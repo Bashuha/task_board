@@ -1,5 +1,5 @@
 from __future__ import annotations
-from sqlalchemy import Column, ForeignKey, inspect
+from sqlalchemy import Column, ForeignKey, inspect, func
 from sqlalchemy.dialects.mysql import (
     INTEGER,
     VARCHAR,
@@ -65,7 +65,7 @@ class Task(Base):
     description = Column(VARCHAR(255), nullable=False)
     owner = Column(VARCHAR(255), nullable=False)
     project_id = Column(INTEGER(), ForeignKey(Project.id), nullable=True)
-    create_date = Column(DATETIME(), nullable=False)
+    create_date = Column(DATETIME(timezone=True), server_default=func.now())
     section_id = Column(INTEGER(), ForeignKey(Sections.id), nullable=True)
     status = Column(BOOLEAN(), server_default="1")
 

@@ -37,7 +37,7 @@ class Project(Base):
 
     id = Column(INTEGER(), primary_key=True)
     name = Column(VARCHAR(255), nullable=False)
-    date = Column(DATETIME(), nullable=False)
+    date = Column(DATETIME(timezone=True), server_default=func.now())
     is_favorites = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
 
@@ -80,7 +80,7 @@ class Comments(Base):
     id = Column(INTEGER(), primary_key=True)
     login = Column(VARCHAR(255), nullable=False)
     text = Column(VARCHAR(255), nullable=False)
-    create_at = Column(DATETIME(), nullable=False)
+    create_at = Column(DATETIME(timezone=True), server_default=func.now())
     task_id = Column(INTEGER(), ForeignKey(Task.id), nullable=True)
 
     Task: Mapped[Task] = relationship()

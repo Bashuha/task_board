@@ -7,41 +7,42 @@ from pprint import pprint
 def get_project_details(project_id):
 
     with Session() as session:
-
-        sections: Sections = session.query(Sections).filter(Sections.project_id==project_id)
-        section_list = list()
-        # идем циклом по полученым разделам
-        for section in sections:
-            section: Sections
-            # создаем словарь, куда пихаем нужные нам данные
-            section_dict = {
-                "id": section.id,
-                "name": section.name,
-                "tasks": list()
-            }
-            # далее идем пока задачам текущего раздела
-            # для которого также создаем словарь 
-            for task in section.Task:
-                task: Task
-                task_dict = {
-                    "description": task.description,
-                    "name": task.name,
-                    "status": task.status,
-                    "task_id": task.id,
-                    "comments_count": len(task.Comments)
-                }
-                # добавляем полученный словарь в список
-                # который хранится в предыдущем словаре в ключе "tasks" 
-                section_dict['tasks'].append(task_dict)
-            # результат добавляем в список разделов
-            section_list.append(section_dict)
-        # создаем словарь с нужными данными, который отдаем на фронт
+        project: Project = session.get(Project, project_id)
+        section_dict = dict()
+        
         project_dict = {
             "project_id": project_id,
-            "project_name": section.Project.name,
-            "is_favorites": section.Project.is_favorites,
-            "sections":section_list
+            "project_name": "Входящие",
+            "tasks": list()
         }
+        if project:
+            project_dict["is_favorites"] = project.is_favorites
+            project_dict['project_name'] = project.name
+        
+            for section in project.Sections:
+                section: Sections
+                section_dict[section.id] = {
+                    "id": section.id,
+                    "name": section.name,
+                    "tasks": list()
+                }
+        task_list: list[Task] = session.query(Task).filter(Task.project_id==project_id)
+        for task in task_list:
+            task: Task
+            task_dict = {
+                "description": task.description,
+                "name": task.name,
+                "status": task.status,
+                "id": task.id,
+                "comments_count": len(task.Comments)
+            }
+            if task.section_id:
+                section_dict[task.section_id]['tasks'].append(task_dict)
+            else:
+                project_dict['tasks'].append(task_dict)
+
+        if project:
+            project_dict['sections'] = list(section_dict.values())
 
     return project_dict, 200
 
@@ -66,7 +67,7 @@ def get_projects():
             for section in project.Sections:
                 section: Sections
                 section_dict = {
-                    "section_id": section.id,
+                    "id": section.id,
                     "name": section.name,
                     "project_id": section.project_id
                 }
@@ -80,8 +81,81 @@ def get_projects():
 def create_project(args: dict):
 
     with Session() as session:
-        pass
+        session.add(Project(**args))
+        session.commit()
+    
+    return 200
 
+
+def edit_project(args: dict):
+
+    with Session() as session:
+        project: Project = session.get(Project, args['project_id'])
+        if not project:
+            return {"message": "Проект не найден"}, 404
+        else:
+            if args.get('name'):
+                project.name = args['name']
+            if args.get('is_favorites') != None:
+                project.is_favorites = args['is_favorites']
+
+    return {"message": "ok"}, 200
+
+
+def change_archive_status(args: dict):
+    with Session() as session:
+        project: Project = session.get(Project, args['project_id'])
+        project.is_archive = args['is_archive']
+        project.is_favorites = False
+        session.commit()
+
+    return 200
+
+
+def delete_from_archive(project_id):
+    with Session() as session:
+        project: Project = session.get(Project, project_id)
+        if project:
+            if project.is_archive:
+                session.execute(delete(Project).where(Project.id==project_id))
+                session.commit()
+            else:
+                return {"message": "Проект не в архиве"}, 400
+
+    return {"message": "Проект удален"}, 200
+
+
+def create_section(args: dict):
+    with Session() as session:
+        project: Project = session.get(Project, args['project_id'])
+        if project:
+            args['order_number'] = len(project.Sections) + 1
+            session.add(Sections(**args))
+            session.commit()
+        else:
+            return {"message": "Проект не найден"}, 404
+        
+    return {"message": "ok"}, 200
+
+
+def edit_section(args: dict):
+    with Session() as session:
+        section: Sections = session.get(Sections, args['section_id'])
+        if section:
+            section.name = args['name']
+            session.commit()
+        else:
+            return {"message": "Раздел не найден"}, 404
+
+    return {"message": "ok"}, 200
+
+
+def delete_section(section_id):
+    with Session() as session:
+        session.execute(delete(Sections).where(Sections.id==section_id))
+        session.commit()
+
+    return 200
 
 
 def get_task_details(task_id):
@@ -103,16 +177,16 @@ def get_task_details(task_id):
             "task_owner": task.owner
         }
 
-        if task.Project:
+        if task.project_id:
             task_dict['project_name'] = task.Project.name
-            task_dict['section_id'] = task.Section.id
-            task_dict['section_name'] = task.Section.name
+            if task.section_id:
+                task_dict['section_id'] = task.section_id
+                task_dict['section_name'] = task.Section.name
 
         for comment in task.Comments:
             comment = comment._asdict()
             comment.pop("task_id")
             task_dict['comments'].append(comment)
-        task_dict['comments'] = [comment._asdict() for comment in task.Comments]
 
     return task_dict, 200
 
@@ -123,6 +197,7 @@ def create_task(args: dict):
         # если нам передали id раздела, то project_id мы подставляем сами
         if args.get('section_id'):
             section: Sections = session.get(Sections, args['section_id'])
+            # если такой раздел существует, то берем оттуда project_id
             if section:
                 args["project_id"] = section.project_id
             else:
@@ -155,7 +230,7 @@ def edit_task(args: dict):
         # если id раздела не передают, то нужно проверить существование переданного проекта
         elif args.get('project_id'):
             project: Project = session.get(Project, args['project_id'])
-            # если такой проект есть, то по умолчанию переносить задачу вне разделов
+            # если такой проект есть, то по умолчанию переносим задачу вне разделов
             if project:
                 args['section_id'] = None
             else:
@@ -178,12 +253,69 @@ def delete_task(task_id):
     return 200
 
 
+def create_comment(args: dict):
+    with Session() as session:
+        task: Task = session.get(Task, args['task_id'])
+        if task:
+            args['login'] = "Ilusha"
+            session.add(Comments(**args))
+            session.commit()
+        else:
+            return {"message": "Задача не найдена"}, 404
+        
+    return {"message": "ok"}, 200
+
+
+def edit_comment(args: dict):
+    with Session() as session:
+        comment: Comments = session.get(Comments, args['comment_id'])
+        if comment:
+            comment.text = args['text']
+            session.commit()
+        else:
+            return {"message": "Комментарий не найден"}, 404
+    
+    return {"message": "ok"}, 200
+
+
+def delete_comment(comment_id):
+    with Session() as session:
+        session.execute(delete(Comments).where(Comments.id==comment_id))
+        session.commit()
+
+    return 200
+
+
+def change_section_order(args: dict):
+    with Session() as session:
+        new_order_list = list()
+        # создаем словарь из нового списка id и генерируем новый порядковый номер
+        for number, sec_id in enumerate(args['sections'], start=1):
+            order_dict = {"id": sec_id['id'], "order_number": number}
+            # добавляем полученный словарь в список для UPDATE
+            new_order_list.append(order_dict)
+        # одним запросом обновляем порядок, используя наш список словарей
+        session.execute(update(Sections).where(Sections.project_id==args['project_id']), new_order_list, execution_options={"synchronize_session": None})
+        session.commit()
+        # мы исользовали "массовое обновление по первичному ключу" и из-за того, что мы 
+        # добавили дополнительный "where" критерий в виде project_id, нам необходимо
+        # прописать execution_options
+
+    return 200
+
+
 
 test_dict = {
-    "task_id": 103,
-    "description": "update ",
+    "sections":
+    [
+    {"id":20},
+    {"id":19},
+    {"id":9}
+    ],
+    "project_id":7
 }
 
+# pprint(change_section_order(test_dict))
 # pprint(get_task_details(88))
-# pprint(edit_task(test_dict))
-# pprint(get_project_details(32))
+# pprint(create_section(test_dict))
+# pprint(get_project_details(7))

@@ -1,6 +1,8 @@
 from flask import Flask, Response, json
 from flask_restful import Api, reqparse, Resource
 from flask.wrappers import Request
+from config import API
+from flask_cors import CORS
 from alchemy_board import (edit_task,
                         create_task,
                         get_project_details,
@@ -18,8 +20,6 @@ from alchemy_board import (edit_task,
                         edit_comment,
                         delete_comment,
                         change_section_order) 
-from config import API
-from flask_cors import CORS
 
 
 class AnyJsonRequest(Request):
@@ -120,7 +120,7 @@ class Sections(_Resource):
     
     def put(self):
         args: dict = self.edit_parser.parse_args()
-        return self.return_json(*create_section(args))
+        return self.return_status(edit_section(args))
 
     def delete(self):
         args: dict = self.edit_parser.parse_args()

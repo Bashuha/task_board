@@ -1,20 +1,24 @@
 from models import *
 from my_engine import Session
-from sqlalchemy import update, select, delete
-from pprint import pprint
+from sqlalchemy import update, delete
 
 
 def get_project_details(project_id):
 
     with Session() as session:
         project: Project = session.get(Project, project_id)
-        section_dict = dict()
+        if project_id != None and not project:
+            return {"message": "Проект не найден"}, 404
         
+        # создаем словарь, который отдадим на фронт
         project_dict = {
             "project_id": project_id,
             "project_name": "Входящие",
             "tasks": list()
         }
+        # если передали project_id, то мы добавляем ключи в итоговый словарь
+        # затем идем по его разделам, и формируем из них словари   
+        section_dict = dict()
         if project:
             project_dict["is_favorites"] = project.is_favorites
             project_dict['project_name'] = project.name
@@ -27,6 +31,8 @@ def get_project_details(project_id):
                     "tasks": list()
                 }
         task_list: list[Task] = session.query(Task).filter(Task.project_id==project_id)
+        # берем задачи из этого проекта (или задачи вне всех проектов)
+        # идем по этим задачам, создаем нужный словарь
         for task in task_list:
             task: Task
             task_dict = {
@@ -36,11 +42,13 @@ def get_project_details(project_id):
                 "id": task.id,
                 "comments_count": len(task.Comments)
             }
+            # если находим задачу с разделом, то добавляем ее в словарь разделов
+            # в противном случае просто добавляем задачу в проект вне разделов 
             if task.section_id:
                 section_dict[task.section_id]['tasks'].append(task_dict)
             else:
                 project_dict['tasks'].append(task_dict)
-
+        # если передавали project_id, мы добавляем ключ в итоговый словарь со списком разделов
         if project:
             project_dict['sections'] = list(section_dict.values())
 
@@ -121,6 +129,8 @@ def delete_from_archive(project_id):
                 session.commit()
             else:
                 return {"message": "Проект не в архиве"}, 400
+        else:
+            {"message": "Проект не найден"}, 404
 
     return {"message": "Проект удален"}, 200
 
@@ -144,10 +154,8 @@ def edit_section(args: dict):
         if section:
             section.name = args['name']
             session.commit()
-        else:
-            return {"message": "Раздел не найден"}, 404
 
-    return {"message": "ok"}, 200
+    return 200
 
 
 def delete_section(section_id):
@@ -172,7 +180,7 @@ def get_task_details(task_id):
             "section_id": None,
             "section_name": None,
             "status": task.status,
-            "task_id": task.id,
+            "id": task.id,
             "task_name": task.name,
             "task_owner": task.owner
         }
@@ -186,6 +194,7 @@ def get_task_details(task_id):
         for comment in task.Comments:
             comment = comment._asdict()
             comment.pop("task_id")
+            comment['create_at'] = comment['create_at'].strftime('%Y-%m-%d')
             task_dict['comments'].append(comment)
 
     return task_dict, 200
@@ -219,7 +228,7 @@ def edit_task(args: dict):
         task: Task = session.get(Task, args['task_id'])
         # если нам передают id раздела, то id проекта мы присваиваем сами
         if args.get('section_id'):
-            # обработка идет только в случае если передали не None
+            # обработка идет только если section_id != None
             # в таком случае мы обращаемся к указанному разделу и берем оттуда id проекта
             section: Sections = session.get(Sections, args['section_id'])
             if section:
@@ -228,10 +237,10 @@ def edit_task(args: dict):
             else:
                 return {"message": "Раздел не найден"}, 404
         # если id раздела не передают, то нужно проверить существование переданного проекта
-        elif args.get('project_id'):
+        elif 'project_id' in args:
             project: Project = session.get(Project, args['project_id'])
-            # если такой проект есть, то по умолчанию переносим задачу вне разделов
-            if project:
+            # при переносе задачи в другой проект или во "Входящие", задача по умолчанию будет вне разделов
+            if project or args["project_id"] == None:
                 args['section_id'] = None
             else:
                 return {"message": "Проект не найден"}, 404
@@ -302,20 +311,3 @@ def change_section_order(args: dict):
         # прописать execution_options
 
     return 200
-
-
-
-test_dict = {
-    "sections":
-    [
-    {"id":20},
-    {"id":19},
-    {"id":9}
-    ],
-    "project_id":7
-}
-
-# pprint(change_section_order(test_dict))
-# pprint(get_task_details(88))
-# pprint(create_section(test_dict))
-# pprint(get_project_details(7))

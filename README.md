@@ -29,80 +29,93 @@
 {
     "projects": [
         {
-            "project_name": "tomatos",
-            "is_favorites": false,
             "id": 7,
-            "is_archive": false,
-            "task_count": 3,
+            "is_archive": true,
+            "is_favorites": false,
+            "project_name": "cucmbers",
             "sections": [
                 {
-                    "section_id": 9,
+                    "id": 9,
                     "name": "Тест создания раздела",
                     "project_id": 7
+                },
+                {
+                    "id": 20,
+                    "name": "Test order number 3",
+                    "project_id": 7
                 }
-            ]
+            ],
+            "task_count": 4
         },
         {
-            "project_name": "Серёзный проект",
-            "is_favorites": false,
             "id": 27,
             "is_archive": false,
-            "task_count": 0,
-            "sections": []
-        },
-        {
-            "project_name": "i76r76rf",
-            "is_favorites": false,
-            "id": 28,
-            "is_archive": false,
-            "task_count": 0,
-            "sections": []
-        },
-        {
-            "project_name": "Нужно больше кельвинов",
             "is_favorites": true,
-            "id": 29,
-            "is_archive": false,
-            "task_count": 2,
+            "project_name": "Серёзный проектспасапсапсап",
             "sections": [
                 {
-                    "section_id": 3,
-                    "name": "Раздел Артема и Кельвина",
-                    "project_id": 29
+                    "id": 23,
+                    "name": "First order number",
+                    "project_id": 27
                 },
                 {
-                    "section_id": 4,
-                    "name": "Измененное имя раздела",
-                    "project_id": 29
+                    "id": 24,
+                    "name": "New sec name",
+                    "project_id": 27
                 }
-            ]
+            ],
+            "task_count": 3
         },
         {
-            "project_name": "Нужно больше кельвинов x2",
-            "is_favorites": false,
             "id": 31,
-            "is_archive": false,
-            "task_count": 0,
-            "sections": []
+            "is_archive": true,
+            "is_favorites": false,
+            "project_name": "Нужно больше кельвинов x2",
+            "sections": [],
+            "task_count": 1
         },
         {
-            "project_name": "Пожалуйста, работай",
+            "id": 37,
+            "is_archive": false,
             "is_favorites": false,
-            "id": 32,
-            "is_archive": true,
-            "task_count": 5,
+            "project_name": "PROJECT",
             "sections": [
                 {
-                    "section_id": 7,
-                    "name": "Раздел для теста 1",
-                    "project_id": 32
+                    "id": 31,
+                    "name": "111",
+                    "project_id": 37
                 },
                 {
-                    "section_id": 11,
-                    "name": "Тест создания второго раздела",
-                    "project_id": 32
+                    "id": 39,
+                    "name": "123",
+                    "project_id": 37
                 }
-            ]
+            ],
+            "task_count": 6
+        },
+        {
+            "id": 38,
+            "is_archive": false,
+            "is_favorites": false,
+            "project_name": "Здорова, Айгиз",
+            "sections": [
+                {
+                    "id": 34,
+                    "name": "Раздел бананов",
+                    "project_id": 38
+                },
+                {
+                    "id": 35,
+                    "name": "Раздел энергетиков",
+                    "project_id": 38
+                },
+                {
+                    "id": 36,
+                    "name": "Раздел Атохиных мониторов",
+                    "project_id": 38
+                }
+            ],
+            "task_count": 1
         }
     ]
 }
@@ -117,14 +130,8 @@
     "is_favorites": false       // может быть и true
 }
 ```
+В ответ приходит только статус
 - Статус 200
-
-Ответ
-```json
-{
-    "message": "ok"
-}
-```
 
 ## Редактирование проекта
 *PUT /to_do_list/project*
@@ -193,6 +200,13 @@
     "message": "Проект не в архиве"
 }
 ```
+* Статус 404
+Ответ если проекта в базе нет
+```json
+{
+    "message": "Проект не найден"
+}
+```
 ## Получить детализацию проекта
 *GET /to_do_list/project*
 
@@ -211,59 +225,50 @@
 ```json
 {
     "is_favorites": false,
-    "project_id": 32,
-    "project_name": "New archive name",
+    "project_id": 7,
+    "project_name": "cucmbers",
     "sections": [
         {
-            "id": 7,
-            "name": "Раздел для теста 1",
+            "id": 9,
+            "name": "Тест создания раздела",
             "tasks": [
                 {
-                    "comments_count": 2,
-                    "description": "Тут совершенно не обязательно что-то писать",
-                    "name": "Задача для теста",
-                    "status": true,
-                    "task_id": 55
+                    "comments_count": 0,
+                    "description": "ну вот описание",
+                    "id": 106,
+                    "name": "Ща кое-что попробую",
+                    "status": false
                 },
                 {
                     "comments_count": 0,
-                    "description": "Новое описание",
-                    "name": "Измененное название задачи",
-                    "status": true,
-                    "task_id": 61
+                    "description": "fewfwefwe",
+                    "id": 107,
+                    "name": "few",
+                    "status": true
                 }
             ]
         },
         {
-            "id": 16,
-            "name": "Test order number",
-            "tasks": []
-        },
-        {
-            "id": 11,
-            "name": "Тест создания второго раздела",
-            "tasks": []
-        },
-        {
-            "id": 12,
-            "name": "",
-            "tasks": []
+            "id": 20,
+            "name": "Test order number 3",
+            "tasks": [
+                {
+                    "comments_count": 0,
+                    "description": null,
+                    "id": 113,
+                    "name": "Task without proj_id",
+                    "status": true
+                }
+            ]
         }
     ],
     "tasks": [
         {
             "comments_count": 0,
-            "description": "Тут совершенно не обязательно что-то писать",
-            "name": "Задача без раздела",
-            "status": true,
-            "task_id": 54
-        },
-        {
-            "comments_count": 0,
-            "description": "Тут совершенно не обязательно что-то писать",
-            "name": "Еще одна такая же",
-            "status": true,
-            "task_id": 62
+            "description": "is this works?",
+            "id": 102,
+            "name": "alchemy test",
+            "status": true
         }
     ]
 }
@@ -276,19 +281,31 @@
 */to_do_list/project*
 ```json
 {
-    "project_name": "Входящие",
     "project_id": null,
+    "project_name": "Входящие",
     "tasks": [
         {
-            "name": "Задача без проекта",
-            "task_id": 57
+            "comments_count": 0,
+            "description": "Новое описание",
+            "id": 61,
+            "name": "Измененное название задачи",
+            "status": false
         },
         {
-            "name": "И еще одна такая же",
-            "task_id": 58
+            "comments_count": 0,
+            "description": null,
+            "id": 111,
+            "name": "Готово опять?",
+            "status": true
+        },
+        {
+            "comments_count": 0,
+            "description": "",
+            "id": 120,
+            "name": "Incoming task, the last one",
+            "status": true
         }
-    ],
-    "sections": []
+    ]
 }
 ```
 
@@ -310,8 +327,8 @@
 {
     "name": "task_name",  // обязательный аргумент
     "description": "description_text",
-    "section_id": 9,     // если передать id, то project_id передавать не нужно; если не передавать аргумент вовсе, задача будет вне разделов
-    "project_id": 7   // передавать только в том случае, если создаешь задачу вне разделов; если не передавать аргумент вовсе, создастся входящая задача
+    "section_id": 9,     // при передаче этого аргумента, project_id передавать не нужно; если не передавать section_id вовсе, задача будет вне разделов
+    "project_id": 7   // передавать только в том случае, если создаешь задачу вне разделов; если не передавать project_id вовсе, создастся входящая задача
 }
 ```
 
@@ -320,6 +337,14 @@
 ```json
 {
     "message": "ok"
+}
+```
+
+* Статус 404
+Ответ, если передан неверный **project_id** или **section_id**
+```json
+{
+    "message": "Проект не найден"
 }
 ```
 
@@ -332,13 +357,14 @@
     "task_id": 60,      // обязательный аргумент
     "name": "new_task_name",
     "description": "new_description_text",
-    "section_id": 9,     // если передаешь section_id, то project_id передавать не нужно; при значени null задача будет вне разделов.
-    "project_id": 7,    // передавать только в том случае, если хочешь переместить задачу во "Входящие" (значение null) или в другой проект вне разделов.
+    "section_id": 9,    // при передаче section_id, project_id передавать не нужно; при значени null задача будет вне разделов.
+    "project_id": 7,    // если передать null, задача перейдет во "Входящие", в остальных случаях задача перейдет в другой проект вне разделов
     "status": false
 }
 ```
 
 * Статус 200
+
 Ответ
 ```json
 {
@@ -346,6 +372,20 @@
 }
 ```
 
+* Статус 404
+
+Ответ в случае если указан несуществующий раздел
+```json
+{
+    "message": "Раздел не найден"
+}
+```
+Или несуществующий проект
+```json
+{
+    "message": "Проект не найден"
+}
+```
 ## Получить детализацию задачи
 *GET /to_do_list/task*
 
@@ -379,7 +419,7 @@
     "section_id": 9,
     "section_name": null,
     "status": true,
-    "task_id": 60,
+    "id": 60,
     "task_name": "new_task_name",
     "task_owner": "Ilusha Tester"
 }
@@ -394,7 +434,7 @@
     "project_name": "Входящие",
     "project_id": null,
     "task_name": "Задача без проекта",
-    "task_id": 57,
+    "id": 57,
     "task_owner": "Ilusha Tester",
     "description": "Типа опписание задаи",
     "create_date": "2023-07-31",
@@ -461,9 +501,22 @@
     "text": "This is the new comment text"
 }
 ```
-В ответ придет только статус
 * Статус 200
 
+Ответ
+```json
+{
+    "message": "ok"
+}
+```
+* Статус 404
+
+Ответ, если комментария в базе нет
+```json
+{
+    "message": "Комментарий не найден"
+}
+```
 
 ## Удаление комментария
 *DELETE /to_do_list/comment*
@@ -485,9 +538,22 @@
     "name": "section_name"  // обязательный аргумент, но можно передать пустую строку
 }
 ```
-В ответ приходит только статус
 * Статус 200
 
+Ответ
+```json
+{
+    "message": "ok"
+}
+```
+* Статус 404
+
+Ответ при попытке создания раздела в несуществующем проекте
+```json
+{
+    "message": "Проект не найден"
+}
+```
 ## Редактирование раздела
 *PUT /to_do_list/section*
 * Тело запроса на редактирование раздела

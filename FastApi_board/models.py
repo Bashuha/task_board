@@ -41,7 +41,7 @@ class Project(Base):
     is_favorites = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
 
-    Task: Mapped[list[Task]] = relationship()
+    Task: Mapped[list[Task]] = relationship(lazy='selectin')
     Sections: Mapped[list[Sections]] = relationship(lazy='selectin')
 
 
@@ -54,7 +54,7 @@ class Sections(Base):
     order_number = Column(INTEGER(), nullable=False)
 
     Project: Mapped[Project] = relationship()
-    Task: Mapped[list[Task]] = relationship()
+    Task: Mapped[list[Task]] = relationship(lazy='selectin')
 
 
 class Task(Base):

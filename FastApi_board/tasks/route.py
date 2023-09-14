@@ -1,24 +1,27 @@
 from database.my_engine import get_db
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-import functions.task_func
-from type_model import Task
+import tasks.functions
+from tasks.model import Task, CreateTask, EditTask
 
 router = APIRouter(prefix='/to_do_list', tags=['Task'])
 
 
-@router.get('/task', status_code=200)
+@router.get('/task', status_code=200, response_model=Task)
 async def get_task_details(task_id: int, session: AsyncSession = Depends(get_db)):
-    return await functions.task_func.get_task_details(task_id, session)
+    return await tasks.functions.get_task_details(task_id, session)
 
-@router.post('/task', status_code=200)
+
+@router.post('/task', status_code=200, response_model=CreateTask)
 async def create_task(task: Task, session: AsyncSession = Depends(get_db)):
-    return await functions.task_func.create_task(task, session)
+    return await tasks.functions.create_task(task, session)
 
-@router.patch('/task', status_code=200)
+
+@router.patch('/task', status_code=200, response_model=EditTask)
 async def edit_task(task: Task, session: AsyncSession = Depends(get_db)):
-    return await functions.task_func.edit_task(task, session)
+    return await tasks.functions.edit_task(task, session)
+
 
 @router.delete('/task', status_code=200)
 async def delete_task(task_id: int, session: AsyncSession = Depends(get_db)):
-    return await functions.task_func.delete_task(task_id, session)
+    return await tasks.functions.delete_task(task_id, session)

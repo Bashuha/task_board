@@ -38,8 +38,8 @@ class Project(Base):
     is_favorites = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
 
-    Task: Mapped[list[Task]] = relationship()
-    Sections: Mapped[list[Sections]] = relationship()
+    Task: Mapped[list[Task]] = relationship(lazy='selectin')
+    Sections: Mapped[list[Sections]] = relationship(lazy='selectin')
 
 
 class Sections(Base):
@@ -50,8 +50,8 @@ class Sections(Base):
     project_id = Column(INTEGER(), ForeignKey(Project.id), nullable=False)
     order_number = Column(INTEGER(), nullable=False)
 
-    Project: Mapped[Project] = relationship()
-    Task: Mapped[list[Task]] = relationship()
+    Project: Mapped[Project] = relationship(lazy='selectin')
+    Task: Mapped[list[Task]] = relationship(lazy='selectin')
 
 
 class Task(Base):
@@ -66,9 +66,9 @@ class Task(Base):
     section_id = Column(INTEGER(), ForeignKey(Sections.id), nullable=True)
     status = Column(BOOLEAN(), server_default="1")
 
-    Project: Mapped[Project] = relationship()
-    Section: Mapped[Sections] = relationship()
-    Comments: Mapped[list[Comments]] = relationship()
+    Project: Mapped[Project] = relationship(lazy='selectin')
+    Section: Mapped[Sections] = relationship(lazy='selectin')
+    Comments: Mapped[list[Comments]] = relationship(lazy='selectin')
 
 
 class Comments(Base):
@@ -80,4 +80,4 @@ class Comments(Base):
     create_at = Column(DATETIME(timezone=True), server_default=func.now())
     task_id = Column(INTEGER(), ForeignKey(Task.id), nullable=True)
 
-    Task: Mapped[Task] = relationship()
+    Task: Mapped[Task] = relationship(lazy='selectin')

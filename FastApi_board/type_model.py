@@ -29,6 +29,22 @@ class Project(BaseModel):
     sections: List[Section] = []
 
 
+class CreateProject(BaseModel):
+    name: str
+    is_favorites: bool
+
+
+class EditProject(BaseModel):
+    id: int
+    name: str = "New name"
+    is_favorites: bool = False
+
+
+class ChangeArchiveStatus(BaseModel):
+    id: int
+    is_archive: bool
+
+
 class ProjectForList(BaseModel):
     project_name: str
     is_favorites: bool

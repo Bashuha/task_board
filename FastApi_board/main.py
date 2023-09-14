@@ -1,8 +1,8 @@
 from fastapi import FastAPI
 import uvicorn
 from database.config import API
-from routers.project import router as project_router
-from routers.task import router as task_router
+from projects.route import router as project_router
+from tasks.route import router as task_router
 
 app = FastAPI(
     title="Task Board"

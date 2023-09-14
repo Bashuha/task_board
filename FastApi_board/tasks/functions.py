@@ -1,8 +1,14 @@
-from models import Project, Sections, Task
+from database.schemas import Project, Sections, Task
 from sqlalchemy import insert, update, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from  type_model import Task as PydanticTask
+from tasks.model import CreateTask, EditTask
 from fastapi import HTTPException
+
+
+def create_comment_dict(comment):
+    comment = comment._asdict()
+    comment.pop("task_id")
+    return comment
 
 
 async def get_task_details(task_id: int, session: AsyncSession):   
@@ -11,7 +17,6 @@ async def get_task_details(task_id: int, session: AsyncSession):
     if not task:
         raise HTTPException(status_code=404, detail='Задача не найдена')
     task_dict = {
-        "comments": list(),
         "create_date": task.create_date.strftime('%Y-%m-%d'),
         "description": task.description,
         "project_id": task.project_id,
@@ -24,49 +29,41 @@ async def get_task_details(task_id: int, session: AsyncSession):
         "task_owner": task.owner
     }
 
-    if task.project_id:
-        project_qr = session.get(Project, task.project_id)
-        project: Project = await project_qr
-        task_dict['project_name'] = project.name
-        if task.section_id:
-            section_qr = session.get(Sections, task.section_id)
-            section: Sections = await section_qr
-            task_dict['section_id'] = section.id
-            task_dict['section_name'] = section.name
+    if task.section_id:
+        task_dict['section_id'] = task.Section.id
+        task_dict['section_name'] = task.Section.name
+        task_dict['project_name'] = task.Project.name
+    elif task.project_id:
+        task_dict['project_name'] = task.Project.name
 
-    for comment in task.Comments:
-        comment = comment._asdict()
-        comment.pop("task_id")
-        comment['create_at'] = comment['create_at'].strftime('%Y-%m-%d')
-        task_dict['comments'].append(comment)
+    task_dict['comments'] = list(map(create_comment_dict, task.Comments))
 
     return task_dict
 
 
-async def create_task(task: PydanticTask, session: AsyncSession):
+async def create_task(task: CreateTask, session: AsyncSession):
     task_data = task.model_dump(exclude={'id', 'status'})
     # если нам передали id раздела, то project_id мы подставляем сами
     if task_data.get('section_id'):
         section_qr = session.get(Sections, task_data['section_id'])
         section: Sections = await section_qr
         # если такой раздел существует, то берем оттуда project_id
-        if section:
-            task_data["project_id"] = section.project_id
-        else:
-            {'message': 'Проект не найден'}, 404
+        if not section:
+            raise HTTPException(detail='Проект не найден', status_code=404)
+        task_data["project_id"] = section.project_id
     # если передали только project_id, то мы просто проверяем его наличие
     elif task_data.get('project_id'):
         project_qr = session.get(Project, task_data['project_id'])
         project: Project = await project_qr
         if not project:
-            return {'message': 'Проект не найден'}, 404
+            raise HTTPException(detail='Проект не найден', status_code=404)
         
     stmt = insert(Task).values(**task_data)
     await session.execute(stmt)
     await session.commit()
 
 
-async def edit_task(task: PydanticTask, session: AsyncSession):
+async def edit_task(task: EditTask, session: AsyncSession):
     task_qr = session.get(Task, task.id)
     task_model: Task = await task_qr
     if not task_model:

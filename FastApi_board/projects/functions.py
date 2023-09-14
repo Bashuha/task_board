@@ -1,7 +1,7 @@
-from models import Project, Sections, Task
+from database.schemas import Project, Sections, Task
 from sqlalchemy import insert, update, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from  type_model import Project as PydanticProject
+from projects.model import CreateProject, EditProject, ChangeArchiveStatus, SmallTask
 from fastapi import HTTPException
 
 
@@ -33,7 +33,6 @@ async def get_projects(session: AsyncSession):
 
 
 async def get_project_details(project_id: int, session: AsyncSession):
-
     project_task = session.get(Project, project_id)
     project: Project = await project_task
     if project_id != None and not project:
@@ -61,10 +60,30 @@ async def get_project_details(project_id: int, session: AsyncSession):
             }
     task_list_qr = await session.execute(select(Task).where(Task.project_id==project_id))
     task_list = task_list_qr.scalars().all()
+
+
+    def create_task_dict(task):
+        task: Task
+        sec_list = list()
+        external_task = list()
+        task_dict = {
+            "description": task.description,
+            "name": task.name,
+            "status": task.status,
+            "id": task.id,
+            "comments_count": len(task.Comments)
+        }
+        if task.section_id:
+            sec_list.append(task_dict)
+        else:
+            external_task.append(task_dict)
+
+
     # берем задачи из этого проекта (или задачи вне всех проектов)
     # идем по этим задачам, создаем нужный словарь
     for task in task_list:
         task: Task
+        
         task_dict = {
             "description": task.description,
             "name": task.name,
@@ -85,19 +104,19 @@ async def get_project_details(project_id: int, session: AsyncSession):
     return project_dict
 
 
-async def create_project(project: PydanticProject, session: AsyncSession):
-    stmt = insert(Project).values(project.model_dump(include={'name', 'is_favorites'}))
+async def create_project(project: CreateProject, session: AsyncSession):
+    stmt = insert(Project).values(project.model_dump())
     await session.execute(stmt)
     await session.commit()
 
 
-async def edit_project(project: PydanticProject, session: AsyncSession):
+async def edit_project(project: EditProject, session: AsyncSession):
     project_qr = session.get(Project, project.id)
     project_model: Project = await project_qr
     if not project_model:
         raise HTTPException(status_code=404, detail="Проект не найден")
 
-    update_project_data = project.model_dump(include={'name', 'is_favorites'})
+    update_project_data = project.model_dump(exclude={'id'}, exclude_unset=True)
     update_query = update(Project).where(Project.id==project.id).values(**update_project_data)
     await session.execute(update_query)
     await session.commit()
@@ -119,7 +138,7 @@ async def delete_from_archive(project_id: int, session: AsyncSession):
     return {"message": "Проект удален"}
 
 
-async def change_archive_status(project: PydanticProject, session: AsyncSession):
+async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSession):
     project = project.model_dump(exclude={'name'})
     project_qr = session.get(Project, project['id'])
     project_model: Project = await project_qr

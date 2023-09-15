@@ -1,7 +1,3 @@
-# import os, sys
-# ABS_PATH = os.path.split(os.path.abspath(__file__))[0]
-# sys.path.append(ABS_PATH)
-
 from database.my_engine import get_db
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession

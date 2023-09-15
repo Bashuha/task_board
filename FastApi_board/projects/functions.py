@@ -32,74 +32,59 @@ async def get_projects(session: AsyncSession):
     return project_list
 
 
+def create_task_dict(task: Task):
+    """
+    Функия для формирования словаря задачи
+    используется в get_project_details и в create_section_dict
+    """
+    task_dict = {
+        "description": task.description,
+        "name": task.name,
+        "status": task.status,
+        "id": task.id,
+        "comments_count": len(task.Comments)
+    }
+    return task_dict
+
+
+def create_section_dict(section: Sections):
+    """
+    Функция формирования словаря раздела с задачами
+    принадлежащими этому разделу 
+    """
+    section_dict = {
+        "id": section.id,
+        "name": section.name
+    }
+    section_dict['tasks'] = list(map(create_task_dict, section.Task))
+    
+    return section_dict
+
+
 async def get_project_details(project_id: int, session: AsyncSession):
-    project_task = session.get(Project, project_id)
-    project: Project = await project_task
+    project_qr = session.get(Project, project_id)
+    project: Project = await project_qr
     if project_id != None and not project:
         raise HTTPException(status_code=404, detail="Проект не найден")
     
+    # делаем запрос на получение задач вне разделов (это могут быть и "Входящие" задачи)
+    external_task_qr = select(Task).where(Task.section_id == None, Task.project_id == project_id)
+    external_task = await session.execute(external_task_qr)
+    external_task_list = external_task.scalars().all()
     # создаем словарь, который отдадим на фронт
     project_dict = {
         "id": project_id,
-        "name": "Входящие",
-        "tasks": list()
+        "name": "Входящие"
     }
     # если передали project_id, то мы добавляем ключи в итоговый словарь
     # затем идем по его разделам, и формируем из них словари   
-    section_dict = dict()
     if project:
         project_dict["is_favorites"] = project.is_favorites
         project_dict['name'] = project.name
-    
-        for section in project.Sections:
-            section: Sections
-            section_dict[section.id] = {
-                "id": section.id,
-                "name": section.name,
-                "tasks": list()
-            }
-    task_list_qr = await session.execute(select(Task).where(Task.project_id==project_id))
-    task_list = task_list_qr.scalars().all()
+        project_dict['sections'] = list(map(create_section_dict, project.Sections))
 
-
-    def create_task_dict(task):
-        task: Task
-        sec_list = list()
-        external_task = list()
-        task_dict = {
-            "description": task.description,
-            "name": task.name,
-            "status": task.status,
-            "id": task.id,
-            "comments_count": len(task.Comments)
-        }
-        if task.section_id:
-            sec_list.append(task_dict)
-        else:
-            external_task.append(task_dict)
-
-
-    # берем задачи из этого проекта (или задачи вне всех проектов)
-    # идем по этим задачам, создаем нужный словарь
-    for task in task_list:
-        task: Task
-        
-        task_dict = {
-            "description": task.description,
-            "name": task.name,
-            "status": task.status,
-            "id": task.id,
-            "comments_count": len(task.Comments)
-        }
-        # если находим задачу с разделом, то добавляем ее в словарь разделов
-        # в противном случае просто добавляем задачу в проект вне разделов 
-        if task.section_id:
-            section_dict[task.section_id]['tasks'].append(task_dict)
-        else:
-            project_dict['tasks'].append(task_dict)
-    # если передавали project_id, мы добавляем ключ в итоговый словарь со списком разделов
-    if project:
-        project_dict['sections'] = list(section_dict.values())
+    # также формируем словарики для задач вне разделов или "Входящих" задач
+    project_dict['tasks'] = list(map(create_task_dict, external_task_list))
 
     return project_dict
 

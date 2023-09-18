@@ -26,7 +26,7 @@ class Project(BaseModel):
 
 class CreateProject(BaseModel):
     name: str
-    is_favorites: bool
+    is_favorites: bool = False
 
 
 class EditProject(BaseModel):
@@ -57,3 +57,7 @@ class ProjectForList(BaseModel):
 
 class ProjectList(BaseModel):
     projects: List[ProjectForList]
+
+
+class NotFoundError(BaseModel):
+    message: str = "Проект не найден"

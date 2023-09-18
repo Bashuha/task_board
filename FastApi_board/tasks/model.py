@@ -27,10 +27,11 @@ class Task(BaseModel):
 
 
 class CreateTask(BaseModel):
+    owner: str = None
     name: str
     description: str
-    section_id: int | None
-    project_id: int | None
+    section_id: int | None = None
+    project_id: int | None = None
 
 
 class EditTask(BaseModel):

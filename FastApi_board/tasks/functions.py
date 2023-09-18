@@ -1,5 +1,5 @@
 from database.schemas import Project, Sections, Task
-from sqlalchemy import insert, update, select, delete
+from sqlalchemy import insert, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from tasks.model import CreateTask, EditTask
 from fastapi import HTTPException
@@ -42,7 +42,7 @@ async def get_task_details(task_id: int, session: AsyncSession):
 
 
 async def create_task(task: CreateTask, session: AsyncSession):
-    task_data = task.model_dump(exclude={'id', 'status'})
+    task_data = task.model_dump(exclude_unset=True)
     # если нам передали id раздела, то project_id мы подставляем сами
     if task_data.get('section_id'):
         section_qr = session.get(Sections, task_data['section_id'])
@@ -58,7 +58,9 @@ async def create_task(task: CreateTask, session: AsyncSession):
         if not project:
             raise HTTPException(detail='Проект не найден', status_code=404)
         
-    stmt = insert(Task).values(**task_data)
+    task_data['owner'] = "Ilusha"
+        
+    stmt = insert(Task).values(task_data)
     await session.execute(stmt)
     await session.commit()
 
@@ -87,7 +89,7 @@ async def edit_task(task: EditTask, session: AsyncSession):
             raise HTTPException(detail="Проект не найден", status_code=404)
         task_data['section_id'] = None
     # далее просто обновляем все данные в объекте Task и комитим
-    update_query = update(Task).where(Task.id==task.id).values(**task_data)
+    update_query = update(Task).where(Task.id==task.id).values(task_data)
     await session.execute(update_query)
     await session.commit()
 

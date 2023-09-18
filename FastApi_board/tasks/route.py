@@ -12,13 +12,13 @@ async def get_task_details(task_id: int, session: AsyncSession = Depends(get_db)
     return await tasks.functions.get_task_details(task_id, session)
 
 
-@router.post('/task', status_code=200, response_model=CreateTask)
-async def create_task(task: Task, session: AsyncSession = Depends(get_db)):
+@router.post('/task', status_code=200)
+async def create_task(task: CreateTask, session: AsyncSession = Depends(get_db)):
     return await tasks.functions.create_task(task, session)
 
 
-@router.patch('/task', status_code=200, response_model=EditTask)
-async def edit_task(task: Task, session: AsyncSession = Depends(get_db)):
+@router.patch('/task', status_code=200)
+async def edit_task(task: EditTask, session: AsyncSession = Depends(get_db)):
     return await tasks.functions.edit_task(task, session)
 
 

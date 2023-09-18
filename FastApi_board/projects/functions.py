@@ -1,7 +1,8 @@
 from database.schemas import Project, Sections, Task
 from sqlalchemy import insert, update, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from projects.model import CreateProject, EditProject, ChangeArchiveStatus, SmallTask
+from projects.model import CreateProject, EditProject, ChangeArchiveStatus, NotFoundError
+from fastapi.responses import JSONResponse
 from fastapi import HTTPException
 
 
@@ -65,7 +66,7 @@ async def get_project_details(project_id: int, session: AsyncSession):
     project_qr = session.get(Project, project_id)
     project: Project = await project_qr
     if project_id != None and not project:
-        raise HTTPException(status_code=404, detail="Проект не найден")
+        return JSONResponse(status_code=404, content={"message": "Проект не найден"})
     
     # делаем запрос на получение задач вне разделов (это могут быть и "Входящие" задачи)
     external_task_qr = select(Task).where(Task.section_id == None, Task.project_id == project_id)
@@ -99,10 +100,10 @@ async def edit_project(project: EditProject, session: AsyncSession):
     project_qr = session.get(Project, project.id)
     project_model: Project = await project_qr
     if not project_model:
-        raise HTTPException(status_code=404, detail="Проект не найден")
+        return JSONResponse(status_code=404, content={"message": "Проект не найден"})
 
     update_project_data = project.model_dump(exclude={'id'}, exclude_unset=True)
-    update_query = update(Project).where(Project.id==project.id).values(**update_project_data)
+    update_query = update(Project).where(Project.id==project.id).values(update_project_data)
     await session.execute(update_query)
     await session.commit()
 
@@ -113,7 +114,7 @@ async def delete_from_archive(project_id: int, session: AsyncSession):
     project_qr = session.get(Project, project_id)
     project_model: Project = await project_qr
     if not project_model:
-        raise HTTPException(detail="Проект не найден", status_code=404)
+        return JSONResponse(status_code=404, content={"message": "Проект не найден"})
     if not project_model.is_archive:
         raise HTTPException(detail="Проект не в архиве", status_code=400)
     

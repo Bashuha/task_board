@@ -9,3 +9,7 @@ class CreateComment(BaseModel):
 class EditComment(BaseModel):
     id: int
     text: str
+
+
+class NotFoundError(BaseModel):
+    message: str = "тут будет сообщение об ошибке"

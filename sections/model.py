@@ -19,3 +19,11 @@ class Section(BaseModel):
 class SectionOrder(BaseModel):
     sections: List[Section]
     project_id: int
+
+
+class NotFoundError(BaseModel):
+    message: str = "тут будет сообщение об ошибке"
+
+
+class BadRequestError(BaseModel):
+    message: str = "Неверный формат данных"

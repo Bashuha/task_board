@@ -41,3 +41,7 @@ class EditTask(BaseModel):
     section_id: int | None = None
     project_id: int | None = None
     status: bool = True
+
+
+class ErrorNotFound(BaseModel):
+    message: str = "тут будет сообщение об ошибке"

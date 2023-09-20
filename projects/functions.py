@@ -1,9 +1,8 @@
 from database.schemas import Project, Sections, Task
 from sqlalchemy import insert, update, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from projects.model import CreateProject, EditProject, ChangeArchiveStatus, NotFoundError
-from fastapi.responses import JSONResponse
-from fastapi import HTTPException
+from projects.model import CreateProject, EditProject, ChangeArchiveStatus
+from fastapi import status, HTTPException
 
 
 async def get_projects(session: AsyncSession):
@@ -66,7 +65,7 @@ async def get_project_details(project_id: int, session: AsyncSession):
     project_qr = session.get(Project, project_id)
     project: Project = await project_qr
     if project_id != None and not project:
-        return JSONResponse(status_code=404, content={"message": "Проект не найден"})
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
     
     # делаем запрос на получение задач вне разделов (это могут быть и "Входящие" задачи)
     external_task_qr = select(Task).where(Task.section_id == None, Task.project_id == project_id)
@@ -97,38 +96,31 @@ async def create_project(project: CreateProject, session: AsyncSession):
 
 
 async def edit_project(project: EditProject, session: AsyncSession):
-    project_qr = session.get(Project, project.id)
-    project_model: Project = await project_qr
-    if not project_model:
-        return JSONResponse(status_code=404, content={"message": "Проект не найден"})
-
     update_project_data = project.model_dump(exclude={'id'}, exclude_unset=True)
     update_query = update(Project).where(Project.id==project.id).values(update_project_data)
     await session.execute(update_query)
     await session.commit()
-
-    return {"message": "ok"}
 
 
 async def delete_from_archive(project_id: int, session: AsyncSession):
     project_qr = session.get(Project, project_id)
     project_model: Project = await project_qr
     if not project_model:
-        return JSONResponse(status_code=404, content={"message": "Проект не найден"})
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
     if not project_model.is_archive:
-        raise HTTPException(detail="Проект не в архиве", status_code=400)
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Проект не в архиве")
     
     delete_query = delete(Project).where(Project.id==project_id)
     await session.execute(delete_query)
     await session.commit()
-    return {"message": "Проект удален"}
 
 
 async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSession):
-    project = project.model_dump(exclude={'name'})
-    project_qr = session.get(Project, project['id'])
+    project_qr = session.get(Project, project.id)
     project_model: Project = await project_qr
     if not project_model:
-        raise HTTPException(detail="Проект не найден", status_code=404)
-    project_model.is_archive = project['is_archive']
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
+    project_model.is_archive = project.is_archive
+    if project.is_archive:
+        project_model.is_favorites = False
     await session.commit()

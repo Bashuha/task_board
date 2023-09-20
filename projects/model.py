@@ -61,3 +61,9 @@ class ProjectList(BaseModel):
 
 class NotFoundError(BaseModel):
     message: str = "Проект не найден"
+
+
+class BadRequestError(BaseModel):
+    message: str = "Проект не в архиве"
+
+

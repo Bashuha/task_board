@@ -1,7 +1,7 @@
 from sqlalchemy import insert, update, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sections.model import CreateSection, EditSection, SectionOrder
-from fastapi import HTTPException
+from fastapi import HTTPException, status
 from database.schemas import Project, Sections
 
 
@@ -9,7 +9,7 @@ async def create_section(section: CreateSection, session: AsyncSession):
     project_qr = session.get(Project, section.project_id)
     project: Project = await project_qr
     if not project:
-        raise HTTPException(status_code=404, detail='Проект не найден')
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Проект не найден')
     
     section_data = section.model_dump()
     section_data['order_number'] = len(project.Sections) + 1
@@ -26,11 +26,6 @@ async def edit_section(section: EditSection, session: AsyncSession):
 
 
 async def delete_section(section_id: int, session: AsyncSession):
-    section_qr = session.get(Sections, section_id)
-    section: Sections = await section_qr
-    if not section:
-        raise HTTPException(detail='Раздел не найдена', status_code=404)
-    
     delete_query = delete(Sections).where(Sections.id == section_id)
     await session.execute(delete_query)
     await session.commit()
@@ -42,7 +37,7 @@ async def change_section_order(section_order: SectionOrder, session: AsyncSessio
     section_list_model = await session.execute(sections_qr)
     section_order_list = section_list_model.scalars().all()
     if len(section_order.sections) != len(section_order_list):
-        raise HTTPException(status_code=400, detail="Неверный формат данных")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный формат данных")
     # создаем словарь из нового списка id и генерируем новый порядковый номер
     for number, sec_id in enumerate(section_order.sections, start=1):
         order_dict = {"id": sec_id.id, "order_number": number}

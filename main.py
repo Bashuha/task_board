@@ -2,16 +2,19 @@ from fastapi import FastAPI, HTTPException, Request
 import uvicorn
 from database.config import API
 from fastapi.responses import JSONResponse
+
 from projects.route import router as project_router
 from tasks.route import router as task_router
 from sections.route import router as section_router
 from comments.route import router as comment_router
+from users.route import router as user_router
 
 
 app = FastAPI(
     title="Task Board"
 )
 
+app.include_router(user_router)
 app.include_router(project_router)
 app.include_router(task_router)
 app.include_router(section_router)

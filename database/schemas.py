@@ -81,3 +81,12 @@ class Comments(Base):
     task_id = Column(INTEGER(), ForeignKey(Task.id), nullable=True)
 
     Task: Mapped[Task] = relationship(lazy='selectin')
+
+
+class Users(Base):
+    __tablename__ = "Users"
+
+    id = Column(INTEGER(), primary_key=True)
+    login = Column(VARCHAR(255), nullable=False)
+    password = Column(VARCHAR(255), nullable=False)
+    date_cr = Column(DATETIME(timezone=True), server_default=func.now())

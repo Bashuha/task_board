@@ -54,7 +54,8 @@ def create_section_dict(section: Sections):
     """
     section_dict = {
         "id": section.id,
-        "name": section.name
+        "name": section.name,
+        "order_num": section.order_number
     }
     section_dict['tasks'] = list(map(create_task_dict, section.Task))
     
@@ -81,7 +82,8 @@ async def get_project_details(project_id: int, session: AsyncSession):
     if project:
         project_dict["is_favorites"] = project.is_favorites
         project_dict['name'] = project.name
-        project_dict['sections'] = list(map(create_section_dict, project.Sections))
+        section_list = list(map(create_section_dict, project.Sections))
+        project_dict['sections'] = sorted(section_list, key=lambda dictionary: dictionary['order_num'])
 
     # также формируем словарики для задач вне разделов или "Входящих" задач
     project_dict['tasks'] = list(map(create_task_dict, external_task_list))

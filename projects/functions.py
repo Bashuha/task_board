@@ -1,5 +1,6 @@
-from database.schemas import Project, Sections, Task
-from sqlalchemy import insert, update, select, delete
+from database.schemas import Project, Sections, Task, Comments
+from sqlalchemy import insert, update, select, delete, func
+from sqlalchemy.orm import load_only, noload
 from sqlalchemy.ext.asyncio import AsyncSession
 from projects.model import CreateProject, EditProject, ChangeArchiveStatus
 from fastapi import status, HTTPException
@@ -8,21 +9,21 @@ from fastapi import status, HTTPException
 async def get_projects(session: AsyncSession):
     projects = await session.execute(select(Project))
     project_list = {"projects": list()}
-    projects_data = projects.scalars().all()
+    projects_data = projects.unique().scalars().all()
     for project in projects_data:
 
         project_dict = {
-            "project_name": project.name,
+            "label": project.name,
             "is_favorites": project.is_favorites,
             "is_archive": project.is_archive,
-            "id": project.id,
-            "task_count": len(project.Task),
+            "value": project.id,
+            "task_count": len([i.status for i in project.Task if i.status == 1]),
             "sections": list()
         }
         for section in project.Sections:
             section_dict = {
-                "id": section.id,
-                "name": section.name,
+                "value": section.id,
+                "label": section.name,
                 "project_id": section.project_id
             }
             project_dict['sections'].append(section_dict)
@@ -65,7 +66,7 @@ def create_section_dict(section: Sections):
 async def get_project_details(project_id: int, session: AsyncSession):
     project_qr = session.get(Project, project_id)
     project: Project = await project_qr
-    if project_id != None and not project:
+    if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
     
     # делаем запрос на получение задач вне разделов (это могут быть и "Входящие" задачи)
@@ -83,7 +84,7 @@ async def get_project_details(project_id: int, session: AsyncSession):
         project_dict["is_favorites"] = project.is_favorites
         project_dict['name'] = project.name
         section_list = list(map(create_section_dict, project.Sections))
-        project_dict['sections'] = sorted(section_list, key=lambda dictionary: dictionary['order_num'])
+        project_dict['sections'] = sorted(section_list, key=lambda section_dict: section_dict['order_num'])
 
     # также формируем словарики для задач вне разделов или "Входящих" задач
     project_dict['tasks'] = list(map(create_task_dict, external_task_list))

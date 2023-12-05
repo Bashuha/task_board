@@ -41,16 +41,16 @@ class ChangeArchiveStatus(BaseModel):
 
 
 class SmallSection(BaseModel):
-    id: int
-    name: str
+    value: int
+    label: str
     project_id: int
 
 
 class ProjectForList(BaseModel):
-    project_name: str
+    label: str
     is_favorites: bool
     is_archive: bool
-    id: int
+    value: int
     task_count: int
     sections: List[SmallSection]
 

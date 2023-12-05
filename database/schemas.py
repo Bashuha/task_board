@@ -83,10 +83,19 @@ class Comments(Base):
     Task: Mapped[Task] = relationship(lazy='selectin')
 
 
-class Users(Base):
-    __tablename__ = "Users"
+class User(Base):
+    __tablename__ = "user"
 
     id = Column(INTEGER(), primary_key=True)
     login = Column(VARCHAR(255), nullable=False)
     password = Column(VARCHAR(255), nullable=False)
     date_cr = Column(DATETIME(timezone=True), server_default=func.now())
+
+
+class UserInfo(Base):
+    __tablename__ = "user_info"
+
+    login = Column(ForeignKey(User.login), nullable=False)
+    full_name = Column(VARCHAR(255), nullable=False)
+
+    user_data: Mapped[User] = relationship()

@@ -1,6 +1,6 @@
 from database.schemas import Project, Sections, Task, Comments
-from sqlalchemy import insert, update, select, delete, func
-from sqlalchemy.orm import load_only, noload
+from sqlalchemy import insert, update, select, delete, func, text
+from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
 from projects.model import CreateProject, EditProject, ChangeArchiveStatus
 from fastapi import status, HTTPException
@@ -73,6 +73,21 @@ async def get_project_details(project_id: int, session: AsyncSession):
     external_task_qr = select(Task).where(Task.section_id == None, Task.project_id == project_id)
     external_task = await session.execute(external_task_qr)
     external_task_list = external_task.unique().scalars().all()
+
+    section_query = await session.execute(
+        select(Sections.id, Sections.name, Sections.order_number).
+        where(Sections.project_id == project_id)
+    )
+    sections = section_query.all()
+
+    task_query = await session.execute(
+        select(Task, func.count(Comments.id)).
+        join(Comments, isouter=True).
+        where(Task.project_id == project_id).
+        where(Task.section_id != None).
+        group_by(Task)
+    )
+    tasks = task_query.all()
     # создаем словарь, который отдадим на фронт
     project_dict = {
         "id": project_id,

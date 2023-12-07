@@ -86,16 +86,18 @@ class Comments(Base):
 class User(Base):
     __tablename__ = "user"
 
-    id = Column(INTEGER(), primary_key=True)
-    login = Column(VARCHAR(255), nullable=False)
+    login = Column(VARCHAR(50), primary_key=True)
     password = Column(VARCHAR(255), nullable=False)
-    date_cr = Column(DATETIME(timezone=True), server_default=func.now())
+    is_active = Column(BOOLEAN(), nullable=False, server_default='1')
+    date_create = Column(DATETIME(timezone=True), server_default=func.now())
 
 
 class UserInfo(Base):
     __tablename__ = "user_info"
 
-    login = Column(ForeignKey(User.login), nullable=False)
-    full_name = Column(VARCHAR(255), nullable=False)
+    login = Column(ForeignKey(User.login), primary_key=True, nullable=False)
+    first_name = Column(VARCHAR(100), nullable=False)
+    second_name = Column(VARCHAR(100), nullable=False)
+    last_name = Column(VARCHAR(100), nullable=False)
 
     user_data: Mapped[User] = relationship()

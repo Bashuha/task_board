@@ -28,5 +28,5 @@ async def error_handler(request: Request, exc: HTTPException):
 
 # port 5017
 if __name__ == '__main__':
-    # app.root_path = '/to_do_list'
+    app.root_path = '/to_do_list'
     uvicorn.run(app, host= API.get('host'), port= API.getint('port'))

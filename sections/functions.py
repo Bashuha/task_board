@@ -35,7 +35,7 @@ async def change_section_order(section_order: SectionOrder, session: AsyncSessio
     new_order_list = list()
     sections_qr = select(Sections).where(Sections.project_id == section_order.project_id)
     section_list_model = await session.execute(sections_qr)
-    section_order_list = section_list_model.scalars().all()
+    section_order_list = section_list_model.unique().scalars().all()
     if len(section_order.sections) != len(section_order_list):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный формат данных")
     # создаем словарь из нового списка id и генерируем новый порядковый номер

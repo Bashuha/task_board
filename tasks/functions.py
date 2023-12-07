@@ -1,5 +1,5 @@
-from database.schemas import Project, Sections, Task
-from sqlalchemy import insert, update, delete
+from database.schemas import Project, Sections, Task, Comments
+from sqlalchemy import insert, update, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from tasks.model import CreateTask, EditTask
 from fastapi import HTTPException, status
@@ -12,8 +12,11 @@ def create_comment_dict(comment):
 
 
 async def get_task_details(task_id: int, session: AsyncSession):   
-    task_qr = session.get(Task, task_id)
-    task: Task = await task_qr
+    # task_qr = session.get(Task, task_id)
+    # task: Task = await task_qr
+    task_query = select(Task, Project, Comments, Sections).join(Task.Project).join(Task.Comments).join(Task.Section).where(Task.id == task_id)
+    task = await session.execute(task_query)
+
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=('Задача не найдена'))
     task_dict = {

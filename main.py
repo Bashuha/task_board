@@ -26,7 +26,7 @@ async def error_handler(request: Request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code,
                         content={"message": f'{exc.detail}'})
 
-
+# port 5017
 if __name__ == '__main__':
-    app.root_path = '/to_do_list'
+    # app.root_path = '/to_do_list'
     uvicorn.run(app, host= API.get('host'), port= API.getint('port'))

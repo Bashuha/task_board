@@ -50,7 +50,7 @@ class Sections(Base):
     project_id = Column(INTEGER(), ForeignKey(Project.id), nullable=False)
     order_number = Column(INTEGER(), nullable=False)
 
-    Project: Mapped[Project] = relationship(lazy='joined')
+    Project: Mapped[Project] = relationship()
     Task: Mapped[list[Task]] = relationship(lazy='joined')
 
 
@@ -66,9 +66,9 @@ class Task(Base):
     section_id = Column(INTEGER(), ForeignKey(Sections.id), nullable=True)
     status = Column(BOOLEAN(), server_default="1")
 
-    Project: Mapped[Project] = relationship(lazy='joined')
-    Section: Mapped[Sections] = relationship(lazy='joined')
-    Comments: Mapped[list[Comments]] = relationship(lazy='joined')
+    Project: Mapped[Project] = relationship()
+    Section: Mapped[Sections] = relationship()
+    Comments: Mapped[list[Comments]] = relationship()
 
 
 class Comments(Base):

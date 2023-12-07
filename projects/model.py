@@ -11,8 +11,8 @@ class SmallTask(BaseModel):
 
 
 class Section(BaseModel):
-    id: int
-    name: str
+    value: int
+    label: str
     tasks: List[SmallTask]
 
 

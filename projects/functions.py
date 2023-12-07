@@ -54,8 +54,8 @@ def create_section_dict(section: Sections):
     принадлежащими этому разделу 
     """
     section_dict = {
-        "id": section.id,
-        "name": section.name,
+        "value": section.id,
+        "label": section.name,
         "order_num": section.order_number
     }
     section_dict['tasks'] = list(map(create_task_dict, section.Task))
@@ -72,7 +72,7 @@ async def get_project_details(project_id: int, session: AsyncSession):
     # делаем запрос на получение задач вне разделов (это могут быть и "Входящие" задачи)
     external_task_qr = select(Task).where(Task.section_id == None, Task.project_id == project_id)
     external_task = await session.execute(external_task_qr)
-    external_task_list = external_task.scalars().all()
+    external_task_list = external_task.unique().scalars().all()
     # создаем словарь, который отдадим на фронт
     project_dict = {
         "id": project_id,

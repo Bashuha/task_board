@@ -14,7 +14,7 @@ def create_comment_dict(comment):
 async def get_task_details(task_id: int, session: AsyncSession):   
     # task_qr = session.get(Task, task_id)
     # task: Task = await task_qr
-    task_query = select(Task, Project, Comments, Sections).join(Task.Project).join(Task.Comments).join(Task.Section).where(Task.id == task_id)
+    task_query = select(Task, Project, Comments, Sections).join(Task.project).join(Task.comments).join(Task.sections).where(Task.id == task_id)
     task = await session.execute(task_query)
 
     if not task:

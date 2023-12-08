@@ -2,13 +2,16 @@ from database.my_engine import get_db
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import projects.functions
-from projects.model import (Project,
-                   ProjectList,
-                   CreateProject,
-                   EditProject,
-                   ChangeArchiveStatus,
-                   NotFoundError,
-                   BadRequestError)
+from projects.model import (
+    Project,
+    IncomingTasks,
+    ProjectList,
+    CreateProject,
+    EditProject,
+    ChangeArchiveStatus,
+    NotFoundError,
+    BadRequestError
+)
 
 
 router = APIRouter(tags=["Projects"])
@@ -28,9 +31,9 @@ responses_dict = {
 
 @router.get('/project',
             status_code=status.HTTP_200_OK,
-            response_model=Project,
+            response_model=Project | IncomingTasks,
             responses={404: responses_dict[404]})
-async def get_project_details(project_id: int, session: AsyncSession = Depends(get_db)):
+async def get_project_details(project_id: int = None, session: AsyncSession = Depends(get_db)):
     return await projects.functions.get_project_details(project_id, session)
 
 

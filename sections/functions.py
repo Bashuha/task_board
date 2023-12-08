@@ -12,7 +12,7 @@ async def create_section(section: CreateSection, session: AsyncSession):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Проект не найден')
     
     section_data = section.model_dump()
-    section_data['order_number'] = len(project.Sections) + 1
+    section_data['order_number'] = len(project.sections) + 1
     stmt = insert(Sections).values(section_data)
     await session.execute(stmt)
     await session.commit()

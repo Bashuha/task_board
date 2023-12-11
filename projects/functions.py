@@ -1,6 +1,6 @@
 from database.schemas import Project, Sections, Task, Comments
 from sqlalchemy import insert, update, select, delete, func, text
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, load_only, noload, lazyload
 from sqlalchemy.ext.asyncio import AsyncSession
 from projects.model import CreateProject, EditProject, ChangeArchiveStatus
 from fastapi import status, HTTPException
@@ -8,40 +8,45 @@ import projects.model as my_model
 
 
 async def get_projects(session: AsyncSession):
-    projects = await session.execute(select(Project))
-    project_list = {"projects": list()}
-    projects_data = projects.unique().scalars().all()
+    proj_qr = await session.execute(
+        select(
+            Project,
+            func.count(Task.id).label("task_count"),
+        ).options(
+            load_only(
+                Project.id,
+                Project.is_archive,
+                Project.is_favorites,
+                Project.name,
+            ),
+            joinedload(Project.sections).load_only(
+                Sections.id,
+                Sections.name,
+                Sections.project_id,
+            ).noload(Sections.tasks),
+            noload(Project.tasks),
+        ).join(
+            Task, isouter=True
+        ).
+        where(
+            Task.status == 1
+        ).
+        group_by(
+            Project
+        )
+    )
+    
+    all_proj = proj_qr.unique().all()
 
-    # proj_qr = await session.execute(
-    #     select(
-    #         Project.id,
-    #         Project.is_archive,
-    #         Project.is_favorites,
-    #         Sections.id,
-    #         Sections.name
-    #     ).options(joinedload(Sections))
-    # )
-    # all_proj = proj_qr.all()
+    project_list = my_model.ProjectList(projects=list())
 
-    for project in projects_data:
+    for project in all_proj:
+        task_count = project[1]
+        project_schema: Project = project[0]
 
-        project_dict = {
-            "label": project.name,
-            "is_favorites": project.is_favorites,
-            "is_archive": project.is_archive,
-            "value": project.id,
-            "task_count": len([i.status for i in project.tasks if i.status == 1]),
-            "sections": list()
-        }
-        for section in project.sections:
-            section_dict = {
-                "value": section.id,
-                "label": section.name,
-                "project_id": section.project_id
-            }
-            project_dict['sections'].append(section_dict)
-        
-        project_list['projects'].append(project_dict)
+        project_model = my_model.ProjectForList.model_validate(project_schema)
+        project_model.task_count = task_count
+        project_list.projects.append(project_model)
 
     return project_list
 
@@ -79,8 +84,58 @@ def create_section_model(section: Sections):
 
 
 async def get_project_details(project_id: int | None, session: AsyncSession):
-    project_qr = session.get(Project, project_id)
-    project: Project = await project_qr
+    # project_qr = session.get(Project, project_id)
+    # project: Project = await project_qr
+    project_query = await session.execute(
+        select(
+            Project
+        ).
+        options(
+            load_only(
+                Project.id,
+                Project.name,
+                Project.is_favorites,
+            ),
+            joinedload(Project.sections).
+                load_only(
+                    Sections.id,
+                    Sections.name,
+                    Sections.order_number
+                ).joinedload(
+                    Sections.tasks
+                ).options(
+                    load_only(
+                        Task.id,
+                        Task.name,
+                        Task.status,
+                        Task.description
+                    )
+                ).joinedload(
+                    Task.comments
+                ).options(
+                    load_only(
+                        Comments.id,
+                    )
+                ),
+            joinedload(
+                Project.tasks
+            ).load_only(
+                Task.id,
+                Task.name,
+                Task.status,
+                Task.description
+            ).joinedload(
+                Task.comments
+            ).options(
+                load_only(
+                    Comments.id,
+                )
+            )
+            
+        ).
+        where(Project.id == project_id)
+    )
+    project: Project = project_query.unique().scalar_one_or_none()
     if project_id and not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
  

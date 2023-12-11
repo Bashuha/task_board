@@ -38,8 +38,8 @@ class Project(Base):
     is_favorites = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
 
-    tasks: Mapped[list[Task]] = relationship(lazy='joined')
-    sections: Mapped[list[Sections]] = relationship(lazy='joined')
+    tasks: Mapped[list[Task]] = relationship(lazy="joined")
+    sections: Mapped[list[Sections]] = relationship()
 
 
 class Sections(Base):
@@ -51,7 +51,7 @@ class Sections(Base):
     order_number = Column(INTEGER(), nullable=False)
 
     project: Mapped[Project] = relationship()
-    tasks: Mapped[list[Task]] = relationship(lazy='joined')
+    tasks: Mapped[list[Task]] = relationship()
 
 
 class Task(Base):
@@ -68,7 +68,7 @@ class Task(Base):
 
     project: Mapped[Project] = relationship()
     sections: Mapped[Sections] = relationship()
-    comments: Mapped[list[Comments]] = relationship(lazy='joined')
+    comments: Mapped[list[Comments]] = relationship()
 
 
 class Comments(Base):

@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 
 
@@ -53,18 +53,18 @@ class ChangeArchiveStatus(_Base):
 
 
 class SmallSection(_Base):
-    value: int
-    label: str
+    value: int = Field(validation_alias='id')
+    label: str = Field(validation_alias='name')
     project_id: int
 
 
 class ProjectForList(_Base):
-    label: str
+    label: str = Field(validation_alias='name')
     is_favorites: bool
     is_archive: bool
-    value: int
-    task_count: int
-    sections: List[SmallSection]
+    value: int = Field(validation_alias='id')
+    task_count: int = 0
+    sections: List[SmallSection] = Field(validation_alias='sections')
 
 
 class ProjectList(_Base):

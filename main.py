@@ -7,7 +7,7 @@ from projects.route import router as project_router
 from tasks.route import router as task_router
 from sections.route import router as section_router
 from comments.route import router as comment_router
-from users.route import router as user_router
+from users.auth import router as user_router
 
 
 app = FastAPI(

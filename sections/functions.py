@@ -1,3 +1,4 @@
+from sqlalchemy.orm import load_only, joinedload
 from sqlalchemy import insert, update, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sections.model import CreateSection, EditSection, SectionOrder
@@ -6,8 +7,15 @@ from database.schemas import Project, Sections
 
 
 async def create_section(section: CreateSection, session: AsyncSession):
-    project_qr = session.get(Project, section.project_id)
-    project: Project = await project_qr
+    project_query = await session.execute(
+        select(Project).
+            options(
+                load_only(Project.id),
+                joinedload(Project.sections).load_only(Sections.id)
+            ).
+        where(Project.id == section.project_id)
+    )
+    project = project_query.unique().scalar_one_or_none()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Проект не найден')
     

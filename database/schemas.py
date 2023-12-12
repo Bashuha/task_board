@@ -38,7 +38,7 @@ class Project(Base):
     is_favorites = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
 
-    tasks: Mapped[list[Task]] = relationship(lazy="joined")
+    tasks: Mapped[list[Task]] = relationship()
     sections: Mapped[list[Sections]] = relationship()
 
 
@@ -95,7 +95,8 @@ class User(Base):
 class UserInfo(Base):
     __tablename__ = "user_info"
 
-    login = Column(ForeignKey(User.login), primary_key=True, nullable=False)
+    id = Column(INTEGER(), primary_key=True)
+    login = Column(ForeignKey(User.login), nullable=False)
     first_name = Column(VARCHAR(100), nullable=False)
     second_name = Column(VARCHAR(100), nullable=False)
     last_name = Column(VARCHAR(100), nullable=False)

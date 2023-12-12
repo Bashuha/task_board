@@ -1,6 +1,6 @@
 from database.schemas import Project, Sections, Task, Comments
-from sqlalchemy import insert, update, select, delete, func, text
-from sqlalchemy.orm import joinedload, load_only, noload, lazyload
+from sqlalchemy import insert, update, select, delete, func
+from sqlalchemy.orm import joinedload, load_only, noload
 from sqlalchemy.ext.asyncio import AsyncSession
 from projects.model import CreateProject, EditProject, ChangeArchiveStatus
 from fastapi import status, HTTPException
@@ -84,12 +84,9 @@ def create_section_model(section: Sections):
 
 
 async def get_project_details(project_id: int | None, session: AsyncSession):
-    # project_qr = session.get(Project, project_id)
-    # project: Project = await project_qr
+    # получение проекта со всеми его разделами и задачами
     project_query = await session.execute(
-        select(
-            Project
-        ).
+        select(Project).
         options(
             load_only(
                 Project.id,
@@ -117,64 +114,44 @@ async def get_project_details(project_id: int | None, session: AsyncSession):
                         Comments.id,
                     )
                 ),
-            joinedload(
-                Project.tasks
-            ).load_only(
-                Task.id,
-                Task.name,
-                Task.status,
-                Task.description
-            ).joinedload(
-                Task.comments
-            ).options(
-                load_only(
-                    Comments.id,
-                )
-            )
-            
         ).
         where(Project.id == project_id)
     )
     project: Project = project_query.unique().scalar_one_or_none()
     if project_id and not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
+    
+    # получение внешних или "Входящих" задач
+    external_task_query = await session.execute(
+        select(
+            Task.id,
+            Task.name,
+            Task.description,
+            Task.status,
+            func.count(Comments.id).label("comments_count")
+        ).
+        join(Comments, isouter=True).
+        where(Task.project_id == project_id).
+        group_by(
+            Task.id,
+            Task.name,
+            Task.description,
+            Task.status
+        )
+    )
+    external_tasks = external_task_query.all()
  
     if project:
         section_list = [create_section_model(section) for section in project.sections]
         sorted_sections = sorted(section_list, key=lambda section_model: section_model.order_number)
-
-        external_tasks = list()
-        for ext_task in project.tasks:
-            if not ext_task.section_id:
-                external_tasks.append(ext_task)
-        ext_task_list = [create_task_model(task) for task in external_tasks]
         project_object = my_model.Project(
             id=project_id,
             name=project.name,
             is_favorites=project.is_favorites,
-            tasks=ext_task_list,
+            tasks=external_tasks,
             sections=sorted_sections
         )
     else:
-        # если project_id не передали, делаем запрос на входящие задачи
-        external_task_query = await session.execute(
-            select(
-                Task.id,
-                Task.name,
-                Task.description,
-                Task.status,
-                func.count(Comments.id).label("comments_count")
-            ).
-            join(Comments, isouter=True).
-            where(Task.project_id == project_id).
-            group_by(
-                Task.id,
-                Task.name,
-                Task.description,
-                Task.status
-            )
-        )
-        external_tasks = external_task_query.all()
         project_object = my_model.IncomingTasks(
             tasks=external_tasks,
         )

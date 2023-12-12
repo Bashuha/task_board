@@ -3,30 +3,37 @@ from __future__ import annotations
 from typing import List
 
 from pydantic import BaseModel
+from datetime import datetime
 
 
-class Comment(BaseModel):
-    create_at: str
+class _Base(BaseModel):
+
+    class Config:
+        from_attributes=True
+
+
+class Comment(_Base):
+    create_at: datetime
     id: int
     login: str
     text: str
 
 
-class Task(BaseModel):
+class Task(_Base):
     comments: List[Comment]
-    create_date: str
+    create_date: datetime
     description: str | None
-    project_id: int
-    project_name: str
-    section_id: int | None
-    section_name: str | None
+    project_id: int | None
+    project_name: str = "Входящие"
+    section_id: int | None = None
+    section_name: str | None = None
     status: bool
     id: int
-    task_name: str
-    task_owner: str
+    name: str
+    owner: str
 
 
-class CreateTask(BaseModel):
+class CreateTask(_Base):
     owner: str = None
     name: str
     description: str
@@ -34,7 +41,7 @@ class CreateTask(BaseModel):
     project_id: int | None = None
 
 
-class EditTask(BaseModel):
+class EditTask(_Base):
     id: int
     name: str = "New name"
     description: str = "New description"
@@ -43,5 +50,5 @@ class EditTask(BaseModel):
     status: bool = True
 
 
-class ErrorNotFound(BaseModel):
+class ErrorNotFound(_Base):
     message: str = "тут будет сообщение об ошибке"

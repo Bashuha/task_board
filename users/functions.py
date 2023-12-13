@@ -53,7 +53,7 @@ async def login_user(response: Response, user_data: model.UserLogin, session: As
     )
     expire_key = datetime.now(timezone(timedelta(hours=3)).utc) + timedelta(hours=12)
     response.set_cookie("access_token", access_token, expires=expire_key, httponly=True)
-    return model.UserResgisetr.model_validate(user_info)
+    return model.UserInfo.model_validate(user_info)
 
 
 def get_token(request: Request):
@@ -77,3 +77,22 @@ async def get_current_user(session: AsyncSession = Depends(get_db), token: str =
     if not user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='такого пользователя не существует')
     return user
+
+
+async def check_user(request: Request, session: AsyncSession):
+    token = request.cookies.get('access_token')
+    if not token:
+        return False
+    try:
+        payload = jwt.decode(
+            token, JWT.get("secret"), JWT.get('algoritm')
+        )
+    except JWTError:
+        return False
+    user_id: str = payload.get("sub")
+    if not user_id:
+        return False
+    user = await UsersDAO.find_by_id(arg=int(user_id), session=session)
+    if not user:
+        return False
+    return True

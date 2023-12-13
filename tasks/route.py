@@ -2,7 +2,7 @@ from database.my_engine import get_db
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import tasks.functions
-from tasks.model import Task, CreateTask, EditTask, ErrorNotFound
+from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, TaskOrder
 
 
 router = APIRouter(tags=['Task'])
@@ -50,3 +50,9 @@ async def edit_task(task: EditTask, session: AsyncSession = Depends(get_db)):
                responses={404: responses_dict[404]})
 async def delete_task(task_id: int, session: AsyncSession = Depends(get_db)):
     return await tasks.functions.delete_task(task_id, session)
+
+
+@router.put('/task_order',
+            status_code=status.HTTP_200_OK)
+async def change_task_order(task_order: TaskOrder, session: AsyncSession = Depends(get_db)):
+    return await tasks.functions.change_task_order(task_order, session)

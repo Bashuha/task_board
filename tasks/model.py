@@ -48,7 +48,17 @@ class EditTask(_Base):
     section_id: int | None = None
     project_id: int | None = None
     status: bool = True
+    order_number: int | None = None
 
 
 class ErrorNotFound(_Base):
     message: str = "тут будет сообщение об ошибке"
+
+
+class TaskForOrder(_Base):
+    id: int
+
+
+class TaskOrder(_Base):
+    tasks: List[TaskForOrder]
+    section_id: int

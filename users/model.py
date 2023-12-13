@@ -1,7 +1,13 @@
 from pydantic import BaseModel, EmailStr
 
 
-class UserResgisetr(BaseModel):
+class _Base(BaseModel):
+
+    class Config:
+        from_attributes=True
+
+
+class UserResgisetr(_Base):
     login: str
     password: str
     first_name: str
@@ -9,6 +15,14 @@ class UserResgisetr(BaseModel):
     last_name: str
 
 
-class UserLogin(BaseModel):
+class UserLogin(_Base):
     login: str
     password: str
+
+
+class UserInfo(_Base):
+    id: int
+    login: str
+    first_name: str
+    second_name: str
+    last_name: str

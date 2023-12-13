@@ -65,6 +65,7 @@ class Task(Base):
     create_date = Column(DATETIME(timezone=True), server_default=func.now())
     section_id = Column(INTEGER(), ForeignKey(Sections.id), nullable=True)
     status = Column(BOOLEAN(), server_default="1")
+    order_number = Column(INTEGER(), nullable=False)
 
     project: Mapped[Project] = relationship()
     sections: Mapped[Sections] = relationship()

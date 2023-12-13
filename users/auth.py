@@ -1,5 +1,5 @@
 from database.my_engine import get_db
-from fastapi import APIRouter, Depends, Response, status, HTTPException
+from fastapi import APIRouter, Depends, Request, Response, status, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import model
 import users.functions as auth_func
@@ -48,9 +48,5 @@ async def logout_user(
     "/check_user",
     status_code=status.HTTP_200_OK
 )
-async def check_user(session: AsyncSession = Depends(get_db), token: str = Depends(get_token)):
-    try:
-        await auth_func.get_current_user(session, token)
-    except HTTPException:
-        return False
-    return True
+async def check_user(request: Request, session: AsyncSession = Depends(get_db)):
+    return await auth_func.check_user(request, session)

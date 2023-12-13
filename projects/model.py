@@ -14,6 +14,7 @@ class SmallTask(_Base):
     description: str | None
     status: bool
     comments_count: int
+    order_number: int
 
 
 class Section(_Base):

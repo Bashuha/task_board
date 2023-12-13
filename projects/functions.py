@@ -61,6 +61,7 @@ def create_task_model(task: Task):
         name=task.name,
         status=task.status,
         id=task.id,
+        order_number=task.order_number,
         comments_count=len(task.comments)
     )
     return task_object
@@ -72,12 +73,13 @@ def create_section_model(section: Sections):
     принадлежащими этому разделу 
     """
     task_list = [create_task_model(task) for task in section.tasks]
+    sorted_task = sorted(task_list, key=lambda task_model: task_model.order_number)
     
     section_object = my_model.Section(
         value=section.id,
         label=section.name,
         order_number=section.order_number,
-        tasks=task_list
+        tasks=sorted_task
     )
     
     return section_object

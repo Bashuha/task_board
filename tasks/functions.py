@@ -37,18 +37,41 @@ async def create_task(task: CreateTask, session: AsyncSession):
     task_data = task.model_dump(exclude_unset=True)
     # если нам передали id раздела, то project_id мы подставляем сами
     if task_data.get('section_id'):
-        section_query = await session.execute(select(Sections.project_id).where(Sections.id == task_data['section_id']))
-        section: Sections = section_query.scalar_one_or_none()
+        project_id_query = await session.execute(select(Sections.project_id).where(Sections.id == task_data['section_id']))
+        project_id: Sections = project_id_query.scalar_one_or_none()
         # если такой раздел существует, то берем оттуда project_id
-        if not section:
+        if not project_id:
             raise HTTPException(detail='Проект не найден', status_code=status.HTTP_404_NOT_FOUND)
-        task_data["project_id"] = section.project_id
+        task_data["project_id"] = project_id
+        task_query = await session.execute(
+            select(Sections.id, func.count(Task.id).label('task_count')).
+            join(Task, isouter=True).
+            where(Sections.id == task_data['section_id'])
+        )
+        task_number = task_query.one()
+        task_data['order_number'] = task_number.task_count + 1
+        
     # если передали только project_id, то мы просто проверяем его наличие
     elif task_data.get('project_id'):
         project_query = await session.execute(select(Project.id).where(Project.id == task_data['project_id']))
         project: Project = project_query.scalar_one_or_none()
         if not project:
             raise HTTPException(detail='Проект не найден', status_code=status.HTTP_404_NOT_FOUND)
+        task_query = await session.execute(
+            select(Project.id, func.count(Task.id).label('task_count')).
+            join(Task, isouter=True).
+            where(Project.id == task_data['project_id']).
+            where(Task.section_id == None)
+        )
+        task_number = task_query.one()
+        task_data['order_number'] = task_number.task_count + 1
+    else:
+        task_query = await session.execute(
+            select(func.count(Task.id).label('task_count')).
+            where(Task.project_id == None)
+        )
+        task_number = task_query.scalar_one()
+        task_data['order_number'] = task_number + 1
         
     task_data['owner'] = "Ilusha"
         

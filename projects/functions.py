@@ -107,7 +107,8 @@ async def get_project_details(project_id: int | None, session: AsyncSession):
                         Task.id,
                         Task.name,
                         Task.status,
-                        Task.description
+                        Task.description,
+                        Task.order_number,
                     )
                 ).joinedload(
                     Task.comments
@@ -130,6 +131,7 @@ async def get_project_details(project_id: int | None, session: AsyncSession):
             Task.name,
             Task.description,
             Task.status,
+            Task.order_number,
             func.count(Comments.id).label("comments_count")
         ).
         join(Comments, isouter=True).
@@ -146,16 +148,18 @@ async def get_project_details(project_id: int | None, session: AsyncSession):
     if project:
         section_list = [create_section_model(section) for section in project.sections]
         sorted_sections = sorted(section_list, key=lambda section_model: section_model.order_number)
+        sorted_ext_task = sorted(external_tasks, key=lambda task_model: task_model.order_number)
         project_object = my_model.Project(
             id=project_id,
             name=project.name,
             is_favorites=project.is_favorites,
-            tasks=external_tasks,
+            tasks=sorted_ext_task,
             sections=sorted_sections
         )
     else:
+        sorted_ext_task = sorted(external_tasks, key=lambda task_model: task_model.order_number)
         project_object = my_model.IncomingTasks(
-            tasks=external_tasks,
+            tasks=sorted_ext_task,
         )
 
     return project_object

@@ -1,5 +1,5 @@
 from sqlalchemy.orm import load_only, joinedload
-from sqlalchemy import insert, update, delete, select
+from sqlalchemy import insert, update, delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sections.model import CreateSection, EditSection, SectionOrder
 from fastapi import HTTPException, status
@@ -8,19 +8,16 @@ from database.schemas import Project, Sections
 
 async def create_section(section: CreateSection, session: AsyncSession):
     project_query = await session.execute(
-        select(Project).
-            options(
-                load_only(Project.id),
-                joinedload(Project.sections).load_only(Sections.id)
-            ).
+        select(Project.id, func.count(Sections.id).label("section_count")).
+        join(Sections, isouter=True).
         where(Project.id == section.project_id)
     )
-    project = project_query.unique().scalar_one_or_none()
+    project = project_query.one_or_none()
     if not project:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Проект не найден')
     
     section_data = section.model_dump()
-    section_data['order_number'] = len(project.sections) + 1
+    section_data['order_number'] = project.section_count + 1
     stmt = insert(Sections).values(section_data)
     await session.execute(stmt)
     await session.commit()
@@ -41,11 +38,13 @@ async def delete_section(section_id: int, session: AsyncSession):
 
 async def change_section_order(section_order: SectionOrder, session: AsyncSession):
     new_order_list = list()
-    sections_qr = select(Sections).where(Sections.project_id == section_order.project_id)
+    sections_qr = select(Sections).where(Sections.project_id == section_order.project_id).order_by(Sections.order_number)
     section_list_model = await session.execute(sections_qr)
     section_order_list = section_list_model.unique().scalars().all()
-    if len(section_order.sections) != len(section_order_list):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный формат данных")
+    if len(section_order_list) != len(section_order.sections):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="количество разделов не совпадвет")
+    if section_order.sections[0].id != section_order_list[0].id:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="основной раздел всегда должен быть первый")
     # создаем словарь из нового списка id и генерируем новый порядковый номер
     for number, sec_id in enumerate(section_order.sections, start=1):
         order_dict = {"id": sec_id.id, "order_number": number}

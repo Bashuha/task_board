@@ -93,4 +93,4 @@ async def get_projects(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await projects.functions.get_projects(session)
+    return await projects.functions.get_projects(user, session)

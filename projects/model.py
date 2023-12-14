@@ -22,13 +22,13 @@ class Section(_Base):
     label: str
     order_number: int
     tasks: List[SmallTask]
+    is_basic: bool
 
 
 class Project(_Base):
     id: int | None
     name: str
     is_favorites: bool
-    tasks: List[SmallTask]
     sections: List[Section]
 
 
@@ -40,6 +40,13 @@ class IncomingTasks(_Base):
 class CreateProject(_Base):
     name: str
     is_favorites: bool = False
+
+
+class SectionForCreate(_Base):
+    name: str = "Основной"
+    project_id: int
+    is_basic: bool = True
+    order_number: int = 1
 
 
 class EditProject(_Base):

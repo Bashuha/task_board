@@ -49,6 +49,7 @@ class Sections(Base):
     name = Column(VARCHAR(255), nullable=False)
     project_id = Column(INTEGER(), ForeignKey(Project.id), nullable=False)
     order_number = Column(INTEGER(), nullable=False)
+    is_basic = Column(BOOLEAN(), nullable=False, server_default='0')
 
     project: Mapped[Project] = relationship()
     tasks: Mapped[list[Task]] = relationship()
@@ -103,3 +104,13 @@ class UserInfo(Base):
     last_name = Column(VARCHAR(100), nullable=False)
 
     user_data: Mapped[User] = relationship()
+
+
+class ProjectUser(Base):
+    __tablename__ = 'project_user'
+
+    project_id = Column(ForeignKey(Project.id), primary_key=True, nullable=False)
+    user_id = Column(ForeignKey(UserInfo.id), primary_key=True, nullable=False)
+
+    project_info: Mapped[Project] = relationship()
+    user_info: Mapped[UserInfo] = relationship()

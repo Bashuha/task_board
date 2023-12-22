@@ -62,3 +62,4 @@ class TaskForOrder(_Base):
 class TaskOrder(_Base):
     tasks: List[TaskForOrder]
     section_id: int
+    task_id: int

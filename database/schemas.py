@@ -5,6 +5,7 @@ from sqlalchemy.dialects.mysql import (
     VARCHAR,
     DATETIME,
     BOOLEAN,
+    TEXT
 )
 import datetime
 from sqlalchemy.orm import relationship
@@ -60,7 +61,7 @@ class Task(Base):
 
     id = Column(INTEGER(), primary_key=True)
     name = Column(VARCHAR(255), nullable=False)
-    description = Column(VARCHAR(255), nullable=False)
+    description = Column(TEXT(), nullable=False)
     owner = Column(VARCHAR(255), nullable=False)
     project_id = Column(INTEGER(), ForeignKey(Project.id), nullable=True)
     create_date = Column(DATETIME(timezone=True), server_default=func.now())
@@ -78,7 +79,7 @@ class Comments(Base):
 
     id = Column(INTEGER(), primary_key=True)
     login = Column(VARCHAR(255), nullable=False)
-    text = Column(VARCHAR(255), nullable=False)
+    text = Column(VARCHAR(1024), nullable=False)
     create_at = Column(DATETIME(timezone=True), server_default=func.now())
     task_id = Column(INTEGER(), ForeignKey(Task.id), nullable=True)
 

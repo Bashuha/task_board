@@ -66,7 +66,8 @@ def create_task_model(task: Task):
         status=task.status,
         id=task.id,
         order_number=task.order_number,
-        comments_count=len(task.comments)
+        comments_count=len(task.comments),
+        create_date=task.create_date
     )
     return task_object
 
@@ -76,14 +77,24 @@ def create_section_model(section: Sections):
     Функция формирования модельки раздела с задачами
     принадлежащими этому разделу 
     """
-    task_list = [create_task_model(task) for task in section.tasks]
-    sorted_task = sorted(task_list, key=lambda task_model: task_model.order_number)
+    active_list = list()
+    close_list = list()
+    for task in section.tasks:
+        model_task = create_task_model(task)
+        if task.status:
+            active_list.append(model_task)
+        else:
+            close_list.append(model_task)
+
+    sorted_active_tasks: list[my_model.SmallTask] = sorted(active_list, key=lambda task_model: task_model.order_number)
+    sorted_close_tasks: list[my_model.SmallTask] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
     
     section_object = my_model.Section(
         value=section.id,
         label=section.name,
         order_number=section.order_number,
-        tasks=sorted_task,
+        open_tasks=sorted_active_tasks,
+        close_tasks=sorted_close_tasks,
         is_basic=section.is_basic,
     )
     
@@ -115,6 +126,7 @@ async def get_project_details(project_id: int | None, session: AsyncSession):
                         Task.status,
                         Task.description,
                         Task.order_number,
+                        Task.create_date,
                     )
                 ).joinedload(
                     Task.comments
@@ -168,7 +180,7 @@ async def get_project_details(project_id: int | None, session: AsyncSession):
     return project_object
 
 
-async def create_project(project: CreateProject, session: AsyncSession):
+async def create_project(project: CreateProject, user: UserInfo, session: AsyncSession):
     # сначала создаем проект
     project_dict = project.model_dump()
     project_data = Project(**project_dict)
@@ -178,6 +190,8 @@ async def create_project(project: CreateProject, session: AsyncSession):
     section_data = my_model.SectionForCreate(project_id=project_data.id)
     section_dict = section_data.model_dump()
     session.add(Sections(**section_dict))
+    await session.commit()
+    await session.execute(insert(ProjectUser).values(project_id=project_data.id, user_id=user.id))
     await session.commit()
 
 

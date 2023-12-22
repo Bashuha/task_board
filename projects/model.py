@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
+from datetime import datetime
 
 
 class _Base(BaseModel):
@@ -15,13 +16,15 @@ class SmallTask(_Base):
     status: bool
     comments_count: int
     order_number: int
+    create_date: datetime
 
 
 class Section(_Base):
     value: int
     label: str
     order_number: int
-    tasks: List[SmallTask]
+    open_tasks: List[SmallTask]
+    close_tasks: List[SmallTask]
     is_basic: bool
 
 

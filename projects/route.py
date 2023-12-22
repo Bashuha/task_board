@@ -51,7 +51,7 @@ async def create_project(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await projects.functions.create_project(project, session)
+    return await projects.functions.create_project(project, user, session)
 
 
 @router.patch('/project', status_code=status.HTTP_200_OK)

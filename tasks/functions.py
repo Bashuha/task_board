@@ -137,10 +137,9 @@ async def delete_task(task_id: int, session: AsyncSession):
 
 async def change_task_order(task_order: my_model.TaskOrder, session: AsyncSession):
     new_order_list = list()
-    task_query = await session.execute(select(Task).where(Task.section_id == task_order.section_id))
-    task_list = task_query.unique().scalars().all()
-    if len(task_order.tasks) != len(task_list):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Неверный формат данных")
+    # обновляем section_id у задачи, которую перетаскивают
+    await session.execute(update(Task).where(Task.id == task_order.task_id).values(section_id = task_order.section_id))
+    await session.commit()
     # создаем словарь из нового списка id и генерируем новый порядковый номер
     for number, task_id in enumerate(task_order.tasks, start=1):
         order_dict = {"id": task_id.id, "order_number": number}

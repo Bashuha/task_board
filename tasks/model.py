@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List
 
 from pydantic import BaseModel
-from datetime import datetime
+from datetime import datetime, date
 
 
 class _Base(BaseModel):
@@ -34,9 +34,9 @@ class Task(_Base):
 
 
 class CreateTask(_Base):
-    owner: str = None
     name: str
     description: str
+    to_do_date: date
     section_id: int | None = None
     project_id: int | None = None
 

@@ -1,4 +1,4 @@
-from database.schemas import Project, Sections, Task
+from database.schemas import Project, Sections, Task, UserInfo
 from sqlalchemy import insert, update, delete, select, func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -33,7 +33,7 @@ async def get_task_details(task_id: int, session: AsyncSession):
     return task_model
 
 
-async def create_task(task: CreateTask, session: AsyncSession):
+async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     task_data = task.model_dump(exclude_unset=True)
     # если нам передали id раздела, то project_id мы подставляем сами
     if task_data.get('section_id'):
@@ -81,7 +81,7 @@ async def create_task(task: CreateTask, session: AsyncSession):
         task_number = task_query.scalar_one()
         task_data['order_number'] = task_number + 1
         
-    task_data['owner'] = "Ilusha"
+    task_data['owner'] = user.login
         
     stmt = insert(Task).values(task_data)
     await session.execute(stmt)

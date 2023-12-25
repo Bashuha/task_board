@@ -11,7 +11,8 @@ from projects.model import (
     EditProject,
     ChangeArchiveStatus,
     NotFoundError,
-    BadRequestError
+    BadRequestError,
+    TodayTaskList
 )
 from users.functions import get_current_user
 
@@ -94,3 +95,13 @@ async def get_projects(
     user: UserInfo = Depends(get_current_user)
 ):
     return await projects.functions.get_projects(user, session)
+
+
+@router.get('/today_tasks',
+            status_code=status.HTTP_200_OK,
+            response_model=TodayTaskList)
+async def get_today_tasks(
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)    
+):
+    return await projects.functions.get_today_tasks(session, user)

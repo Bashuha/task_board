@@ -3,6 +3,8 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import tasks.functions
 from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, TaskOrder
+from users.functions import get_current_user
+from database.schemas import UserInfo
 
 
 router = APIRouter(tags=['Task'])
@@ -32,8 +34,12 @@ async def get_task_details(task_id: int, session: AsyncSession = Depends(get_db)
 @router.post('/task',
              status_code=status.HTTP_200_OK,
              responses={404: responses_dict[404]})
-async def create_task(task: CreateTask, session: AsyncSession = Depends(get_db)):
-    return await tasks.functions.create_task(task, session)
+async def create_task(
+    task: CreateTask,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await tasks.functions.create_task(task, session, user)
 
 
 @router.patch('/task',

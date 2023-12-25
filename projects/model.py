@@ -9,6 +9,22 @@ class _Base(BaseModel):
         from_attributes=True
 
 
+class TodayTask(_Base):
+    id: int
+    name: str
+    description: str
+    status: bool
+    project_id: int
+    project_name: str
+    section_id: int
+    section_name: str
+    comments_count: int
+
+
+class TodayTaskList(_Base):
+    task_list: List[TodayTask]
+
+
 class SmallTask(_Base):
     id: int
     name: str

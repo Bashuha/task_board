@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from projects.model import CreateProject, EditProject, ChangeArchiveStatus
 from fastapi import status, HTTPException
 import projects.model as my_model
+from datetime import datetime
 
 
 async def get_projects(user: UserInfo, session: AsyncSession):
@@ -99,6 +100,70 @@ def create_section_model(section: Sections):
     )
     
     return section_object
+
+
+def create_today_task_model(task: Task):
+    """
+    Функия для формирования модельки задачи
+    используется в get_today_tasks
+    """
+    task_object = my_model.TodayTask(
+        id=task.id,
+        name=task.name,
+        description=task.description,
+        status=task.status,
+        project_id=task.project_id,
+        project_name=task.project.name,
+        section_id=task.section_id,
+        section_name=task.sections.name,
+        comments_count=len(task.comments),
+    )
+    return task_object
+
+
+async def get_today_tasks(session: AsyncSession, user: UserInfo):
+    today_date = datetime.today().date()
+    task_query = await session.execute(
+        select(Task).options(
+            load_only(
+                Task.id,
+                Task.name,
+                Task.description,
+                Task.status,
+                Task.project_id,
+                Task.section_id,
+            ),
+            joinedload(Task.project).
+                load_only(
+                    Project.name
+                ),
+            joinedload(Task.sections).
+                load_only(
+                    Sections.name
+                ),
+            joinedload(Task.comments).
+                load_only(
+                    Comments.id
+                )
+        ).
+        where(
+            Task.to_do_date == today_date
+        ).
+        where(
+            Task.owner == user.login
+        ).
+        where(
+            Task.status == True
+        )
+    )
+
+    today_tasks = task_query.unique().scalars().all()
+    tasks_object = my_model.TodayTaskList(task_list=list())
+    for task in today_tasks:
+        task_model = create_today_task_model(task)
+        tasks_object.task_list.append(task_model)
+
+    return tasks_object
 
 
 async def get_project_details(project_id: int | None, session: AsyncSession):

@@ -9,6 +9,33 @@ class _Base(BaseModel):
         from_attributes=True
 
 
+class SectionForDetails(_Base):
+    value: int = Field(validation_alias='id')
+    label: str = Field(validation_alias='name')
+    order_number: int
+    is_basic: bool
+
+
+class TaskForDetails(_Base):
+    id: int
+    name: str
+    description: str | None
+    section_id: int | None
+    status: bool
+    comments_count: int
+    order_number: int
+    create_date: datetime
+
+
+class ProjectDetails(_Base):
+    id: int | None
+    name: str
+    is_favorites: bool
+    sections: List[SectionForDetails]
+    open_tasks: List[TaskForDetails]
+    close_tasks: List[TaskForDetails]
+
+
 class TodayTask(_Base):
     id: int
     name: str

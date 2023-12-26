@@ -12,7 +12,8 @@ from projects.model import (
     ChangeArchiveStatus,
     NotFoundError,
     BadRequestError,
-    TodayTaskList
+    TodayTaskList,
+    ProjectDetails
 )
 from users.functions import get_current_user
 
@@ -42,6 +43,18 @@ async def get_project_details(
     user: UserInfo = Depends(get_current_user)
 ):
     return await projects.functions.get_project_details(project_id, session)
+
+
+@router.get('/project_details',
+            status_code=status.HTTP_200_OK,
+            response_model=ProjectDetails | IncomingTasks,
+            responses={404: responses_dict[404]})
+async def new_project_details(
+    project_id: int = None,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await projects.functions.project_details(project_id, session)
 
 
 @router.post('/project',

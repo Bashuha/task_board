@@ -166,6 +166,113 @@ async def get_today_tasks(session: AsyncSession, user: UserInfo):
     return tasks_object
 
 
+def create_task(task: Task):
+    """
+    Функия для формирования модельки задачи
+    используется в project_details
+    """
+    task_object = my_model.TaskForDetails(
+        description=task.description,
+        name=task.name,
+        status=task.status,
+        id=task.id,
+        order_number=task.order_number,
+        comments_count=len(task.comments),
+        create_date=task.create_date,
+        section_id=task.section_id,
+    )
+    return task_object
+
+
+async def project_details(project_id: int | None, session: AsyncSession):
+    project_query = await session.execute(
+        select(Project).
+        options(
+            load_only(
+                Project.id,
+                Project.name,
+                Project.is_favorites
+            ),
+            joinedload(Project.sections).
+                load_only(
+                    Sections.id,
+                    Sections.name,
+                    Sections.order_number,
+                    Sections.is_basic,
+                ),
+            joinedload(Project.tasks).
+                load_only(
+                    Task.id,
+                    Task.name,
+                    Task.status,
+                    Task.description,
+                    Task.order_number,
+                    Task.create_date,
+                    Task.section_id,
+                ).
+                joinedload(
+                    Task.comments
+                ).
+                load_only(
+                    Comments.id
+                )
+        ).
+        where(Project.id == project_id)
+    )
+    project: Project = project_query.unique().scalar_one_or_none()
+    if project_id and not project:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
+    
+    if project:
+        active_list = list()
+        close_list = list()
+        for task in project.tasks:
+            model_task = create_task(task)
+            if task.status:
+                active_list.append(model_task)
+            else:
+                close_list.append(model_task)
+        sorted_active_tasks: list[my_model.SmallTask] = sorted(active_list, key=lambda task_model: task_model.order_number)
+        sorted_close_tasks: list[my_model.SmallTask] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
+        sorted_sections = sorted(project.sections, key=lambda section_model: section_model.order_number)
+
+        project_object = my_model.ProjectDetails(
+            id=project.id,
+            name=project.name,
+            is_favorites=project.is_favorites,
+            sections=sorted_sections,
+            open_tasks=sorted_active_tasks,
+            close_tasks=sorted_close_tasks,
+        )
+    else:
+        # получение "Входящих" задач
+        external_task_query = await session.execute(
+            select(
+                Task.id,
+                Task.name,
+                Task.description,
+                Task.status,
+                Task.order_number,
+                func.count(Comments.id).label("comments_count")
+            ).
+            join(Comments, isouter=True).
+            where(Task.project_id == project_id).
+            group_by(
+                Task.id,
+                Task.name,
+                Task.description,
+                Task.status
+            )
+        )
+        external_tasks = external_task_query.all()
+        sorted_ext_task = sorted(external_tasks, key=lambda task_model: task_model.order_number)
+        project_object = my_model.IncomingTasks(
+            tasks=sorted_ext_task,
+        )
+
+    return project_object
+
+
 async def get_project_details(project_id: int | None, session: AsyncSession):
     # получение проекта со всеми его разделами и задачами
     project_query = await session.execute(

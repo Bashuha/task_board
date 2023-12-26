@@ -36,7 +36,7 @@ class Task(_Base):
 class CreateTask(_Base):
     name: str
     description: str
-    to_do_date: date
+    to_do_date: date | None = None
     section_id: int | None = None
     project_id: int | None = None
 

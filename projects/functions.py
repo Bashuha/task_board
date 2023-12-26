@@ -56,6 +56,17 @@ async def get_projects(user: UserInfo, session: AsyncSession):
     return project_list
 
 
+async def check_user_project(project_id, session: AsyncSession, user: UserInfo):
+    check_user_query = await session.execute(
+        select(ProjectUser).
+        where(ProjectUser.project_id == project_id).
+        where(ProjectUser.user_id == user.id)
+    )
+    check_user = check_user_query.one_or_none()
+    if not check_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='вы не можете взаимодействовать с проектами, в которых вас нет')
+
+
 def create_task_model(task: Task):
     """
     Функия для формирования модельки задачи
@@ -184,46 +195,47 @@ def create_task(task: Task):
     return task_object
 
 
-async def project_details(project_id: int | None, session: AsyncSession):
-    project_query = await session.execute(
-        select(Project).
-        options(
-            load_only(
-                Project.id,
-                Project.name,
-                Project.is_favorites
-            ),
-            joinedload(Project.sections).
+async def project_details(project_id: int | None, session: AsyncSession, user: UserInfo):
+    if project_id:
+        await check_user_project(project_id, session, user)
+        project_query = await session.execute(
+            select(Project).
+            options(
                 load_only(
-                    Sections.id,
-                    Sections.name,
-                    Sections.order_number,
-                    Sections.is_basic,
+                    Project.id,
+                    Project.name,
+                    Project.is_favorites
                 ),
-            joinedload(Project.tasks).
-                load_only(
-                    Task.id,
-                    Task.name,
-                    Task.status,
-                    Task.description,
-                    Task.order_number,
-                    Task.create_date,
-                    Task.section_id,
-                ).
-                joinedload(
-                    Task.comments
-                ).
-                load_only(
-                    Comments.id
-                )
-        ).
-        where(Project.id == project_id)
-    )
-    project: Project = project_query.unique().scalar_one_or_none()
-    if project_id and not project:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
+                joinedload(Project.sections).
+                    load_only(
+                        Sections.id,
+                        Sections.name,
+                        Sections.order_number,
+                        Sections.is_basic,
+                    ),
+                joinedload(Project.tasks).
+                    load_only(
+                        Task.id,
+                        Task.name,
+                        Task.status,
+                        Task.description,
+                        Task.order_number,
+                        Task.create_date,
+                        Task.section_id,
+                    ).
+                    joinedload(
+                        Task.comments
+                    ).
+                    load_only(
+                        Comments.id
+                    )
+            ).
+            where(Project.id == project_id)
+        )
+        project: Project = project_query.unique().scalar_one_or_none()
+        if not project:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
     
-    if project:
         active_list = list()
         close_list = list()
         for task in project.tasks:
@@ -253,15 +265,18 @@ async def project_details(project_id: int | None, session: AsyncSession):
                 Task.description,
                 Task.status,
                 Task.order_number,
-                func.count(Comments.id).label("comments_count")
+                Task.create_date,
+                func.count(Comments.id).label("comments_count"),
             ).
             join(Comments, isouter=True).
             where(Task.project_id == project_id).
+            where(Task.owner == user.login).
             group_by(
                 Task.id,
                 Task.name,
                 Task.description,
-                Task.status
+                Task.status,
+                Task.create_date,
             )
         )
         external_tasks = external_task_query.all()
@@ -367,14 +382,18 @@ async def create_project(project: CreateProject, user: UserInfo, session: AsyncS
     await session.commit()
 
 
-async def edit_project(project: EditProject, session: AsyncSession):
+async def edit_project(project: EditProject, session: AsyncSession, user: UserInfo):
+    await check_user_project(project.id, session, user)
+
     update_project_data = project.model_dump(exclude={'id'}, exclude_unset=True)
     update_query = update(Project).where(Project.id==project.id).values(update_project_data)
     await session.execute(update_query)
     await session.commit()
 
 
-async def delete_from_archive(project_id: int, session: AsyncSession):
+async def delete_from_archive(project_id: int, session: AsyncSession, user: UserInfo):
+    await check_user_project(project_id, session, user)
+
     project_query = await session.execute(
         select(Project.id, Project.is_archive).
         where(Project.id == project_id)
@@ -382,15 +401,15 @@ async def delete_from_archive(project_id: int, session: AsyncSession):
     project_model: Project = project_query.one_or_none()
     if not project_model:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
-    if not project_model.is_archive:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Проект не в архиве")
     
-    delete_query = delete(Project).where(Project.id==project_id)
+    delete_query = delete(Project).where(Project.id == project_id).where(Project.is_archive == True)
     await session.execute(delete_query)
     await session.commit()
 
 
-async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSession):
+async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSession, user: UserInfo):
+    await check_user_project(project.id, session, user)
+
     project_query = await session.execute(select(Project.id).where(Project.id == project.id))
     project_id = project_query.scalar_one_or_none()
     if not project_id:

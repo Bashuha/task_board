@@ -7,7 +7,7 @@ from fastapi import HTTPException, status
 import tasks.model as my_model
 
 
-async def get_task_details(task_id: int, session: AsyncSession):   
+async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):   
     task_query = await session.execute(
         select(Task).
         options(
@@ -15,12 +15,13 @@ async def get_task_details(task_id: int, session: AsyncSession):
             joinedload(Task.sections).load_only(Sections.name),
             joinedload(Task.project).load_only(Project.name)
         ).
-        where(Task.id == task_id)
+        where(Task.id == task_id).
+        where(Task.owner == user.login)
     )
     task = task_query.unique().scalar_one_or_none()
 
     if not task:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=('Задача не найдена'))
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Задача не найдена')
     
     task_model = my_model.Task.model_validate(task)
 
@@ -88,7 +89,20 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     await session.commit()
 
 
-async def edit_task(task: EditTask, session: AsyncSession):
+async def check_task_user(task_id: int, session: AsyncSession, user: UserInfo):
+    check_user_query = await session.execute(
+        select(Task.id).
+        where(Task.id == task_id).
+        where(Task.owner == user.login)
+    )
+    check_user = check_user_query.one_or_none()
+    if not check_user:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='вы не можете взаимодействовать с этими задачами')
+
+
+async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
+    await check_task_user(task.id, session, user)
+
     task_query = await session.execute(select(Task.id).where(Task.id == task.id))
     task_id = task_query.scalar_one_or_none()
     if not task_id:
@@ -124,7 +138,9 @@ async def edit_task(task: EditTask, session: AsyncSession):
     await session.commit()
 
 
-async def delete_task(task_id: int, session: AsyncSession):
+async def delete_task(task_id: int, session: AsyncSession, user):
+    await check_task_user(task_id, session, user)
+
     task_query = await session.execute(select(Task.id).where(Task.id == task_id))
     task = task_query.scalar_one_or_none()
     if not task:
@@ -135,7 +151,7 @@ async def delete_task(task_id: int, session: AsyncSession):
     await session.commit()
 
 
-async def change_task_order(task_order: my_model.TaskOrder, session: AsyncSession):
+async def change_task_order(task_order: my_model.TaskOrder, session: AsyncSession, user: UserInfo):
     new_order_list = list()
     # обновляем section_id у задачи, которую перетаскивают
     await session.execute(update(Task).where(Task.id == task_order.task_id).values(section_id = task_order.section_id))
@@ -146,7 +162,13 @@ async def change_task_order(task_order: my_model.TaskOrder, session: AsyncSessio
         # добавляем полученный словарь в список для UPDATE
         new_order_list.append(order_dict)
     # одним запросом обновляем порядок, используя наш список словарей
-    await session.execute(update(Task).where(Task.section_id == task_order.section_id), new_order_list, execution_options={"synchronize_session": False})
+    await session.execute(
+        update(Task).
+        where(Task.section_id == task_order.section_id).
+        where(Task.owner == user.login),
+        new_order_list,
+        execution_options={"synchronize_session": False}
+    )
     await session.commit()
     # мы исользовали "массовое обновление по первичному ключу" и из-за того, что мы 
     # добавили дополнительный "where" критерий в виде project_id, нам необходимо

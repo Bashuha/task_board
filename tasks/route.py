@@ -1,7 +1,7 @@
 from database.my_engine import get_db
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-import tasks.functions
+import tasks.functions as task_func
 from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, TaskOrder
 from users.functions import get_current_user
 from database.schemas import UserInfo
@@ -27,8 +27,12 @@ responses_dict = {404: {"model": ErrorNotFound,
             status_code=status.HTTP_200_OK,
             response_model=Task,
             responses={404: responses_dict[404]})
-async def get_task_details(task_id: int, session: AsyncSession = Depends(get_db)):
-    return await tasks.functions.get_task_details(task_id, session)
+async def get_task_details(
+    task_id: int,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await task_func.get_task_details(task_id, session, user)
 
 
 @router.post('/task',
@@ -39,7 +43,7 @@ async def create_task(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await tasks.functions.create_task(task, session, user)
+    return await task_func.create_task(task, session, user)
 
 
 @router.patch('/task',
@@ -47,18 +51,30 @@ async def create_task(
               responses={
                     404: {"model": ErrorNotFound,
                           "description": error_description}})
-async def edit_task(task: EditTask, session: AsyncSession = Depends(get_db)):
-    return await tasks.functions.edit_task(task, session)
+async def edit_task(
+    task: EditTask,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await task_func.edit_task(task, session, user)
 
 
 @router.delete('/task',
                status_code=status.HTTP_200_OK,
                responses={404: responses_dict[404]})
-async def delete_task(task_id: int, session: AsyncSession = Depends(get_db)):
-    return await tasks.functions.delete_task(task_id, session)
+async def delete_task(
+    task_id: int,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await task_func.delete_task(task_id, session, user)
 
 
 @router.put('/task_order',
             status_code=status.HTTP_200_OK)
-async def change_task_order(task_order: TaskOrder, session: AsyncSession = Depends(get_db)):
-    return await tasks.functions.change_task_order(task_order, session)
+async def change_task_order(
+    task_order: TaskOrder,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await task_func.change_task_order(task_order, session, user)

@@ -2,7 +2,7 @@ from database.my_engine import get_db
 from database.schemas import UserInfo
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
-import projects.functions
+import projects.functions as project_func
 from projects.model import (
     Project,
     IncomingTasks,
@@ -42,7 +42,7 @@ async def get_project_details(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await projects.functions.get_project_details(project_id, session)
+    return await project_func.get_project_details(project_id, session)
 
 
 @router.get('/project_details',
@@ -54,7 +54,7 @@ async def new_project_details(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await projects.functions.project_details(project_id, session)
+    return await project_func.project_details(project_id, session, user)
 
 
 @router.post('/project',
@@ -65,7 +65,7 @@ async def create_project(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await projects.functions.create_project(project, user, session)
+    return await project_func.create_project(project, user, session)
 
 
 @router.patch('/project', status_code=status.HTTP_200_OK)
@@ -74,7 +74,7 @@ async def edit_project(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await projects.functions.edit_project(project, session)
+    return await project_func.edit_project(project, session, user)
 
 
 @router.put('/change_archive_status',
@@ -85,7 +85,7 @@ async def change_archive_status(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await projects.functions.change_archive_status(project, session)
+    return await project_func.change_archive_status(project, session, user)
 
 
 @router.delete('/project',
@@ -97,7 +97,7 @@ async def delete_from_archive(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await projects.functions.delete_from_archive(project_id, session)
+    return await project_func.delete_from_archive(project_id, session, user)
 
 
 @router.get('/project_list',
@@ -107,7 +107,7 @@ async def get_projects(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await projects.functions.get_projects(user, session)
+    return await project_func.get_projects(user, session)
 
 
 @router.get('/today_tasks',
@@ -117,4 +117,4 @@ async def get_today_tasks(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)    
 ):
-    return await projects.functions.get_today_tasks(session, user)
+    return await project_func.get_today_tasks(session, user)

@@ -1,5 +1,5 @@
 from database.schemas import Project, Sections, Task, Comments, UserInfo, ProjectUser
-from sqlalchemy import insert, update, select, delete, func, funcfilter
+from sqlalchemy import insert, update, select, delete, func
 from sqlalchemy.orm import joinedload, load_only, noload
 from sqlalchemy.ext.asyncio import AsyncSession
 from projects.model import CreateProject, EditProject, ChangeArchiveStatus
@@ -15,11 +15,12 @@ async def get_projects(user: UserInfo, session: AsyncSession):
         select(
             Project,
             func.count(func.IF((Task.status == 1), 1, None)).label("task_count"),
+            ProjectUser.is_favorites.label("is_favorites"),
         ).options(
             load_only(
                 Project.id,
                 Project.is_archive,
-                Project.is_favorites,
+                # Project.is_favorites,
                 Project.name,
             ),
             joinedload(Project.sections).load_only(
@@ -37,7 +38,10 @@ async def get_projects(user: UserInfo, session: AsyncSession):
             ProjectUser.user_id == user.id
         ).
         group_by(
-            Project
+            Project.id,
+            Project.is_archive,
+            Project.name,
+            ProjectUser.is_favorites,
         )
     )
     
@@ -48,9 +52,11 @@ async def get_projects(user: UserInfo, session: AsyncSession):
     for project in all_proj:
         task_count = project[1]
         project_schema: Project = project[0]
+        is_favorites = project[2]
 
         project_model = my_model.ProjectForList.model_validate(project_schema)
         project_model.task_count = task_count
+        project_model.is_favorites = is_favorites
         project_list.projects.append(project_model)
 
     return project_list
@@ -65,52 +71,6 @@ async def check_user_project(project_id, session: AsyncSession, user: UserInfo):
     check_user = check_user_query.one_or_none()
     if not check_user:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='вы не можете взаимодействовать с проектами, в которых вас нет')
-
-
-def create_task_model(task: Task):
-    """
-    Функия для формирования модельки задачи
-    используется в get_project_details и в create_section_model
-    """
-    task_object = my_model.SmallTask(
-        description=task.description,
-        name=task.name,
-        status=task.status,
-        id=task.id,
-        order_number=task.order_number,
-        comments_count=len(task.comments),
-        create_date=task.create_date
-    )
-    return task_object
-
-
-def create_section_model(section: Sections):
-    """
-    Функция формирования модельки раздела с задачами
-    принадлежащими этому разделу 
-    """
-    active_list = list()
-    close_list = list()
-    for task in section.tasks:
-        model_task = create_task_model(task)
-        if task.status:
-            active_list.append(model_task)
-        else:
-            close_list.append(model_task)
-
-    sorted_active_tasks: list[my_model.SmallTask] = sorted(active_list, key=lambda task_model: task_model.order_number)
-    sorted_close_tasks: list[my_model.SmallTask] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
-    
-    section_object = my_model.Section(
-        value=section.id,
-        label=section.name,
-        order_number=section.order_number,
-        open_tasks=sorted_active_tasks,
-        close_tasks=sorted_close_tasks,
-        is_basic=section.is_basic,
-    )
-    
-    return section_object
 
 
 def create_today_task_model(task: Task):
@@ -199,12 +159,12 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
     if project_id:
         await check_user_project(project_id, session, user)
         project_query = await session.execute(
-            select(Project).
+            select(Project, ProjectUser.is_favorites.label('is_favorites')).
             options(
                 load_only(
                     Project.id,
                     Project.name,
-                    Project.is_favorites
+                    # Project.is_favorites
                 ),
                 joinedload(Project.sections).
                     load_only(
@@ -230,11 +190,16 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                         Comments.id
                     )
             ).
-            where(Project.id == project_id)
+            join(ProjectUser, isouter=True).
+            where(Project.id == project_id).
+            where(ProjectUser.user_id == user.id)
         )
-        project: Project = project_query.unique().scalar_one_or_none()
-        if not project:
+        project_info = project_query.unique().one_or_none()
+        if not project_info:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
+        
+        project: Project = project_info[0]
+        is_favorites = project_info[1]
     
         active_list = list()
         close_list = list()
@@ -251,7 +216,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
         project_object = my_model.ProjectDetails(
             id=project.id,
             name=project.name,
-            is_favorites=project.is_favorites,
+            is_favorites=is_favorites,
             sections=sorted_sections,
             open_tasks=sorted_active_tasks,
             close_tasks=sorted_close_tasks,

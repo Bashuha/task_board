@@ -37,7 +37,7 @@ class Project(Base):
     id = Column(INTEGER(), primary_key=True)
     name = Column(VARCHAR(255), nullable=False)
     date = Column(DATETIME(timezone=True), server_default=func.now())
-    is_favorites = Column(BOOLEAN(), server_default="0")
+    # is_favorites = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
 
     tasks: Mapped[list[Task]] = relationship()
@@ -114,6 +114,7 @@ class ProjectUser(Base):
 
     project_id = Column(ForeignKey(Project.id), primary_key=True, nullable=False)
     user_id = Column(ForeignKey(UserInfo.id), primary_key=True, nullable=False)
+    is_favorites = Column(BOOLEAN(), nullable=False, server_default='0')
 
     project_info: Mapped[Project] = relationship()
     user_info: Mapped[UserInfo] = relationship()

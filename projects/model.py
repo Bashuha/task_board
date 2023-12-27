@@ -114,7 +114,7 @@ class SmallSection(_Base):
 
 class ProjectForList(_Base):
     label: str = Field(validation_alias='name')
-    is_favorites: bool
+    is_favorites: bool = False
     is_archive: bool
     value: int = Field(validation_alias='id')
     task_count: int = 0

@@ -1,12 +1,13 @@
-from sqlalchemy.orm import load_only, joinedload
+from projects.functions import check_user_project
 from sqlalchemy import insert, update, delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
-from sections.model import CreateSection, EditSection, SectionOrder
+from sections.model import CreateSection, EditSection, SectionOrder, DeleteSection
 from fastapi import HTTPException, status
-from database.schemas import Project, Sections
+from database.schemas import Project, Sections, UserInfo
 
 
-async def create_section(section: CreateSection, session: AsyncSession):
+async def create_section(section: CreateSection, session: AsyncSession, user: UserInfo):
+    await check_user_project(section.project_id, session, user)
     project_query = await session.execute(
         select(Project.id, func.count(Sections.id).label("section_count")).
         join(Sections, isouter=True).
@@ -23,24 +24,29 @@ async def create_section(section: CreateSection, session: AsyncSession):
     await session.commit()
 
 
-async def edit_section(section: EditSection, session: AsyncSession):
+async def edit_section(section: EditSection, session: AsyncSession, user: UserInfo):
+    await check_user_project(section.project_id, session, user)
     section_data = section.model_dump(exclude={'id'})
     update_query = update(Sections).where(Sections.id == section.id).values(section_data)
     await session.execute(update_query)
     await session.commit()
 
 
-async def delete_section(section_id: int, session: AsyncSession):
-    delete_query = delete(Sections).where(Sections.id == section_id)
+async def delete_section(section: DeleteSection, session: AsyncSession, user: UserInfo):
+    await check_user_project(section.project_id, session, user)
+    delete_query = delete(Sections).where(Sections.id == section.id)
     await session.execute(delete_query)
     await session.commit()
 
 
-async def change_section_order(section_order: SectionOrder, session: AsyncSession):
+async def change_section_order(section_order: SectionOrder, session: AsyncSession, user: UserInfo):
+    await check_user_project(section_order.project_id, session, user)
+    
     new_order_list = list()
     sections_qr = select(Sections).where(Sections.project_id == section_order.project_id).order_by(Sections.order_number)
     section_list_model = await session.execute(sections_qr)
     section_order_list = section_list_model.unique().scalars().all()
+
     if len(section_order_list) != len(section_order.sections):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="количество разделов не совпадвет")
     if section_order.sections[0].id != section_order_list[0].id:

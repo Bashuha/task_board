@@ -27,6 +27,7 @@ class Task(_Base):
     project_name: str = "Входящие"
     section_id: int | None = None
     section_name: str | None = None
+    to_do_date: date | None
     status: bool
     id: int
     name: str
@@ -49,6 +50,7 @@ class EditTask(_Base):
     project_id: int | None = None
     status: bool = True
     order_number: int | None = None
+    to_do_date: date | None = None
 
 
 class ErrorNotFound(_Base):

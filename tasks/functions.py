@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from tasks.model import CreateTask, EditTask
 from fastapi import HTTPException, status
 import tasks.model as my_model
+from projects.functions import check_user_project
 
 
 async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):   
@@ -43,6 +44,8 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
         # если такой раздел существует, то берем оттуда project_id
         if not project_id:
             raise HTTPException(detail='Проект не найден', status_code=status.HTTP_404_NOT_FOUND)
+        
+        await check_user_project(project_id, session, user)
         task_data["project_id"] = project_id
         task_query = await session.execute(
             select(Sections.id, func.count(Task.id).label('task_count')).
@@ -61,9 +64,10 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
             where(Project.id == task_data['project_id']).
             where(Sections.is_basic == True)
         )
-        project: Project = project_query.one_or_none()
+        project = project_query.one_or_none()
         if not project:
             raise HTTPException(detail='Проект не найден', status_code=status.HTTP_404_NOT_FOUND)
+        await check_user_project(project.id, session, user)
         # далее берем количество задач у проекта в основом разделе
         task_query = await session.execute(
             select(Project.id, func.count(Task.id).label('task_count')).
@@ -77,7 +81,8 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     else:
         task_query = await session.execute(
             select(func.count(Task.id).label('task_count')).
-            where(Task.project_id == None)
+            where(Task.project_id == None).
+            where(Task.owner == user.login)
         )
         task_number = task_query.scalar_one()
         task_data['order_number'] = task_number + 1
@@ -89,20 +94,7 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     await session.commit()
 
 
-async def check_task_user(task_id: int, session: AsyncSession, user: UserInfo):
-    check_user_query = await session.execute(
-        select(Task.id).
-        where(Task.id == task_id).
-        where(Task.owner == user.login)
-    )
-    check_user = check_user_query.one_or_none()
-    if not check_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='вы не можете взаимодействовать с этими задачами')
-
-
 async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
-    await check_task_user(task.id, session, user)
-
     task_query = await session.execute(select(Task.id).where(Task.id == task.id))
     task_id = task_query.scalar_one_or_none()
     if not task_id:
@@ -133,20 +125,22 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
             raise HTTPException(detail="Проект не найден", status_code=status.HTTP_404_NOT_FOUND)
         task_data['section_id'] = None
     # далее просто обновляем все данные в объекте Task и комитим
-    update_query = update(Task).where(Task.id == task.id).values(task_data)
-    await session.execute(update_query)
+    await session.execute(
+        update(Task).
+        where(Task.id == task.id).
+        where(Task.owner == user.login).
+        values(task_data)
+    )
     await session.commit()
 
 
-async def delete_task(task_id: int, session: AsyncSession, user):
-    await check_task_user(task_id, session, user)
-
+async def delete_task(task_id: int, session: AsyncSession, user: UserInfo):
     task_query = await session.execute(select(Task.id).where(Task.id == task_id))
     task = task_query.scalar_one_or_none()
     if not task:
         raise HTTPException(detail='Задача не найдена', status_code=status.HTTP_404_NOT_FOUND)
     
-    delete_query = delete(Task).where(Task.id==task_id)
+    delete_query = delete(Task).where(Task.id == task_id).where(Task.owner == user.login)
     await session.execute(delete_query)
     await session.commit()
 
@@ -154,7 +148,11 @@ async def delete_task(task_id: int, session: AsyncSession, user):
 async def change_task_order(task_order: my_model.TaskOrder, session: AsyncSession, user: UserInfo):
     new_order_list = list()
     # обновляем section_id у задачи, которую перетаскивают
-    await session.execute(update(Task).where(Task.id == task_order.task_id).values(section_id = task_order.section_id))
+    await session.execute(
+        update(Task).
+        where(Task.id == task_order.task_id).
+        where(Task.owner == user.login).
+        values(section_id = task_order.section_id))
     await session.commit()
     # создаем словарь из нового списка id и генерируем новый порядковый номер
     for number, task_id in enumerate(task_order.tasks, start=1):

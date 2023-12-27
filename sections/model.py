@@ -10,6 +10,12 @@ class CreateSection(BaseModel):
 class EditSection(BaseModel):
     id: int
     name: str
+    project_id: int
+
+
+class DeleteSection(BaseModel):
+    id: int
+    project_id: int
 
 
 class Section(BaseModel):

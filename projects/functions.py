@@ -255,8 +255,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
 
 async def create_project(project: CreateProject, user: UserInfo, session: AsyncSession):
     # сначала создаем проект
-    project_dict = project.model_dump()
-    project_data = Project(**project_dict)
+    project_data = Project(name=project.name)
     session.add(project_data)
     await session.commit()
     # после чего создаем ему основной раздел
@@ -264,7 +263,14 @@ async def create_project(project: CreateProject, user: UserInfo, session: AsyncS
     section_dict = section_data.model_dump()
     session.add(Sections(**section_dict))
     await session.commit()
-    await session.execute(insert(ProjectUser).values(project_id=project_data.id, user_id=user.id))
+    await session.execute(
+        insert(ProjectUser).
+        values(
+            project_id=project_data.id,
+            user_id=user.id,
+            is_favorites=project.is_favorites,
+        )
+    )
     await session.commit()
 
 
@@ -272,8 +278,16 @@ async def edit_project(project: EditProject, session: AsyncSession, user: UserIn
     await check_user_project(project.id, session, user)
 
     update_project_data = project.model_dump(exclude={'id'}, exclude_unset=True)
-    update_query = update(Project).where(Project.id==project.id).values(update_project_data)
-    await session.execute(update_query)
+    if update_project_data.get('is_favorites') is not None:
+        await session.execute(
+            update(ProjectUser).
+            where(ProjectUser.user_id == user.id).
+            where(ProjectUser.project_id == project.id).
+            values(is_favorites=update_project_data.pop('is_favorites'))
+        )
+    if update_project_data:
+        update_query = update(Project).where(Project.id==project.id).values(update_project_data)
+        await session.execute(update_query)
     await session.commit()
 
 
@@ -303,6 +317,11 @@ async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSess
     await session.execute(
         update(Project).
         where(Project.id == project.id).
-        values(is_archive=project.is_archive, is_favorites=False)
+        values(is_archive=project.is_archive)
+    )
+    await session.execute(
+        update(ProjectUser).
+        where(ProjectUser.project_id == project.id).
+        values(is_favorites=False)
     )
     await session.commit()

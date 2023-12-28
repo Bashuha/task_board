@@ -41,26 +41,50 @@ def create_token(data: dict):
     return encoded_jwt
 
 
+def update_token(user_id, response: Response):
+    access_token = create_token(
+        {
+            "sub": user_id,
+            "type": "access"
+        }
+    )
+    expire_key = datetime.now(timezone(timedelta(hours=3)).utc) + timedelta(minutes=10)
+    response.set_cookie("access_token", access_token, expires=expire_key, httponly=True)
+    
+    refresh_token = create_token(
+        {
+            "sub": user_id,
+            "type": "refresh"
+        }
+    )
+    expire_refresh = datetime.now(timezone(timedelta(hours=3)).utc) + timedelta(days=30)
+    response.set_cookie("refresh_token", refresh_token, expires=expire_refresh, httponly=True)
+
+    return access_token
+
+
 async def login_user(response: Response, user_data: model.UserLogin, session: AsyncSession):
     user = await UsersDAO.check_user(arg=user_data.login, session=session)
     if not user or not verify_password(user_data.password, user.password):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="введены неверные данные")
     user_info = await UsersDAO.find_by_id(session=session, arg=user.id)
-    access_token = create_token(
-        {
-            "sub": str(user.id)
-        }
-    )
-    expire_key = datetime.now(timezone(timedelta(hours=3)).utc) + timedelta(hours=12)
-    response.set_cookie("access_token", access_token, expires=expire_key, httponly=True)
+    update_token(user_id=str(user.id), response=response)
+
     return model.UserInfo.model_validate(user_info)
 
 
-def get_token(request: Request):
-    token = request.cookies.get('access_token')
-    if not token:
+def get_token(request: Request, response: Response):
+    access_token = request.cookies.get('access_token')
+    refresh_token = request.cookies.get('refresh_token')
+    if not refresh_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
-    return token
+    if not access_token and refresh_token:
+        payload = jwt.decode(
+            refresh_token, JWT.get("secret"), JWT.get('algoritm')
+        )
+        access_token = update_token(user_id=payload.get('sub'), response=response)
+
+    return access_token
 
 
 async def get_current_user(session: AsyncSession = Depends(get_db), token: str = Depends(get_token)):
@@ -70,6 +94,9 @@ async def get_current_user(session: AsyncSession = Depends(get_db), token: str =
         )
     except JWTError:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="неправильный токен")
+    if payload.get("type") != "access":
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="не тот токен")
+
     user_id: str = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail='ошибка токена')

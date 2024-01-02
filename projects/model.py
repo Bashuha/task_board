@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import List
-from datetime import datetime
+from datetime import date, datetime
 
 
 class _Base(BaseModel):
@@ -25,6 +25,7 @@ class TaskForDetails(_Base):
     comments_count: int
     order_number: int
     create_date: datetime
+    to_do_date: date | None
 
 
 class ProjectDetails(_Base):
@@ -60,22 +61,7 @@ class SmallTask(_Base):
     comments_count: int
     order_number: int
     create_date: datetime
-
-
-class Section(_Base):
-    value: int
-    label: str
-    order_number: int
-    open_tasks: List[SmallTask]
-    close_tasks: List[SmallTask]
-    is_basic: bool
-
-
-class Project(_Base):
-    id: int | None
-    name: str
-    is_favorites: bool
-    sections: List[Section]
+    to_do_date: date | None
 
 
 class IncomingTasks(_Base):

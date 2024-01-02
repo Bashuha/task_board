@@ -151,6 +151,7 @@ def create_task(task: Task):
         comments_count=len(task.comments),
         create_date=task.create_date,
         section_id=task.section_id,
+        to_do_date=task.to_do_date,
     )
     return task_object
 
@@ -182,6 +183,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                         Task.order_number,
                         Task.create_date,
                         Task.section_id,
+                        Task.to_do_date,
                     ).
                     joinedload(
                         Task.comments
@@ -209,8 +211,8 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                 active_list.append(model_task)
             else:
                 close_list.append(model_task)
-        sorted_active_tasks: list[my_model.SmallTask] = sorted(active_list, key=lambda task_model: task_model.order_number)
-        sorted_close_tasks: list[my_model.SmallTask] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
+        sorted_active_tasks: list[my_model.TaskForDetails] = sorted(active_list, key=lambda task_model: task_model.order_number)
+        sorted_close_tasks: list[my_model.TaskForDetails] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
         sorted_sections = sorted(project.sections, key=lambda section_model: section_model.order_number)
 
         project_object = my_model.ProjectDetails(
@@ -231,6 +233,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                 Task.status,
                 Task.order_number,
                 Task.create_date,
+                Task.to_do_date,
                 func.count(Comments.id).label("comments_count"),
             ).
             join(Comments, isouter=True).
@@ -242,6 +245,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                 Task.description,
                 Task.status,
                 Task.create_date,
+                Task.to_do_date,
             )
         )
         external_tasks = external_task_query.all()

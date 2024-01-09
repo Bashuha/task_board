@@ -27,14 +27,18 @@ async def create_section(section: CreateSection, session: AsyncSession, user: Us
 async def edit_section(section: EditSection, session: AsyncSession, user: UserInfo):
     await check_user_project(section.project_id, session, user)
     section_data = section.model_dump(exclude={'id'})
-    update_query = update(Sections).where(Sections.id == section.id).values(section_data)
-    await session.execute(update_query)
+    await session.execute(
+        update(Sections).
+        where(Sections.id == section.id).
+        where(Sections.is_basic == False).
+        values(section_data)
+    )
     await session.commit()
 
 
 async def delete_section(section: DeleteSection, session: AsyncSession, user: UserInfo):
     await check_user_project(section.project_id, session, user)
-    delete_query = delete(Sections).where(Sections.id == section.id)
+    delete_query = delete(Sections).where(Sections.id == section.id).where(Sections.is_basic == False)
     await session.execute(delete_query)
     await session.commit()
 

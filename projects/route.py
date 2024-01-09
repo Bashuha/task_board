@@ -4,7 +4,6 @@ from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import projects.functions as project_func
 from projects.model import (
-    IncomingTasks,
     ProjectList,
     CreateProject,
     EditProject,
@@ -35,7 +34,7 @@ responses_dict = {
 @router.get(
     '/project_details',
     status_code=status.HTTP_200_OK,
-    response_model=ProjectDetails | IncomingTasks,
+    response_model=ProjectDetails,
     responses={404: responses_dict[404]},
     summary='Получение детализации проекта'
 )

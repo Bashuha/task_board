@@ -9,7 +9,6 @@ from datetime import datetime
 
 
 async def get_projects(user: UserInfo, session: AsyncSession):
-    # users_project_query = await session.execute(select(ProjectUser.project_id).where(ProjectUser.user_id == user.id))
 
     proj_qr = await session.execute(
         select(
@@ -20,7 +19,6 @@ async def get_projects(user: UserInfo, session: AsyncSession):
             load_only(
                 Project.id,
                 Project.is_archive,
-                # Project.is_favorites,
                 Project.name,
             ),
             joinedload(Project.sections).load_only(
@@ -37,6 +35,7 @@ async def get_projects(user: UserInfo, session: AsyncSession):
         where(
             ProjectUser.user_id == user.id
         ).
+        where(Project.is_incoming == False).
         group_by(
             Project.id,
             Project.is_archive,
@@ -103,6 +102,7 @@ async def get_today_tasks(session: AsyncSession, user: UserInfo):
                 Task.status,
                 Task.project_id,
                 Task.section_id,
+                Task.to_do_date,
             ),
             joinedload(Task.project).
                 load_only(
@@ -118,7 +118,7 @@ async def get_today_tasks(session: AsyncSession, user: UserInfo):
                 )
         ).
         where(
-            Task.to_do_date == today_date
+            Task.to_do_date <= today_date
         ).
         where(
             Task.owner == user.login
@@ -129,10 +129,14 @@ async def get_today_tasks(session: AsyncSession, user: UserInfo):
     )
 
     today_tasks = task_query.unique().scalars().all()
-    tasks_object = my_model.TodayTaskList(task_list=list())
+    tasks_object = my_model.TodayTaskList(today_tasks=list(), outstanding_tasks=list())
     for task in today_tasks:
-        task_model = create_today_task_model(task)
-        tasks_object.task_list.append(task_model)
+        if task.to_do_date == today_date:
+            task_model: my_model.TodayTask = create_today_task_model(task)
+            tasks_object.today_tasks.append(task_model)
+        elif task.to_do_date < today_date:
+            task_model: my_model.TodayTask = create_today_task_model(task)
+            tasks_object.outstanding_tasks.append(task_model)
 
     return tasks_object
 
@@ -165,7 +169,6 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                 load_only(
                     Project.id,
                     Project.name,
-                    # Project.is_favorites
                 ),
                 joinedload(Project.sections).
                     load_only(
@@ -194,6 +197,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
             ).
             join(ProjectUser, isouter=True).
             where(Project.id == project_id).
+            where(Project.is_incoming == False).
             where(ProjectUser.user_id == user.id)
         )
         project_info = project_query.unique().one_or_none()
@@ -224,34 +228,63 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
             close_tasks=sorted_close_tasks,
         )
     else:
-        # получение "Входящих" задач
-        external_task_query = await session.execute(
-            select(
-                Task.id,
-                Task.name,
-                Task.description,
-                Task.status,
-                Task.order_number,
-                Task.create_date,
-                Task.to_do_date,
-                func.count(Comments.id).label("comments_count"),
+        project_query = await session.execute(
+            select(Project).
+            options(
+                load_only(
+                    Project.id,
+                    Project.name,
+                ),
+                joinedload(Project.sections).
+                    load_only(
+                        Sections.id,
+                        Sections.name,
+                        Sections.order_number,
+                        Sections.is_basic,
+                    ),
+                joinedload(Project.tasks).
+                    load_only(
+                        Task.id,
+                        Task.name,
+                        Task.status,
+                        Task.description,
+                        Task.order_number,
+                        Task.create_date,
+                        Task.section_id,
+                        Task.to_do_date,
+                    ).
+                    joinedload(
+                        Task.comments
+                    ).
+                    load_only(
+                        Comments.id
+                    )
             ).
-            join(Comments, isouter=True).
-            where(Task.project_id == project_id).
-            where(Task.owner == user.login).
-            group_by(
-                Task.id,
-                Task.name,
-                Task.description,
-                Task.status,
-                Task.create_date,
-                Task.to_do_date,
-            )
+            join(ProjectUser, isouter=True).
+            where(Project.is_incoming == True).
+            where(ProjectUser.user_id == user.id)
         )
-        external_tasks = external_task_query.all()
-        sorted_ext_task = sorted(external_tasks, key=lambda task_model: task_model.order_number)
-        project_object = my_model.IncomingTasks(
-            tasks=sorted_ext_task,
+        project = project_query.unique().scalar_one_or_none()
+        active_list = list()
+        close_list = list()
+        for task in project.tasks:
+            model_task = create_task(task)
+            if task.status:
+                active_list.append(model_task)
+            else:
+                close_list.append(model_task)
+
+        sorted_active_tasks: list[my_model.TaskForDetails] = sorted(active_list, key=lambda task_model: task_model.order_number)
+        sorted_close_tasks: list[my_model.TaskForDetails] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
+        sorted_sections = sorted(project.sections, key=lambda section_model: section_model.order_number)
+
+        project_object = my_model.ProjectDetails(
+            id=project.id,
+            name=project.name,
+            is_favorites=False,
+            sections=sorted_sections,
+            open_tasks=sorted_active_tasks,
+            close_tasks=sorted_close_tasks,
         )
 
     return project_object
@@ -276,6 +309,7 @@ async def create_project(project: CreateProject, user: UserInfo, session: AsyncS
         )
     )
     await session.commit()
+    return project_data.id
 
 
 async def edit_project(project: EditProject, session: AsyncSession, user: UserInfo):
@@ -290,8 +324,12 @@ async def edit_project(project: EditProject, session: AsyncSession, user: UserIn
             values(is_favorites=update_project_data.pop('is_favorites'))
         )
     if update_project_data:
-        update_query = update(Project).where(Project.id==project.id).values(update_project_data)
-        await session.execute(update_query)
+        await session.execute(
+            update(Project).
+            where(Project.id==project.id).
+            where(Project.is_incoming == False).
+            values(update_project_data)
+        )
     await session.commit()
 
 
@@ -300,7 +338,8 @@ async def delete_from_archive(project_id: int, session: AsyncSession, user: User
 
     project_query = await session.execute(
         select(Project.id, Project.is_archive).
-        where(Project.id == project_id)
+        where(Project.id == project_id).
+        where(Project.is_incoming == False)
     )
     project_model: Project = project_query.one_or_none()
     if not project_model:
@@ -321,6 +360,7 @@ async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSess
     await session.execute(
         update(Project).
         where(Project.id == project.id).
+        where(Project.is_incoming == False).
         values(is_archive=project.is_archive)
     )
     await session.execute(

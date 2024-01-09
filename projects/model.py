@@ -50,7 +50,8 @@ class TodayTask(_Base):
 
 
 class TodayTaskList(_Base):
-    task_list: List[TodayTask]
+    today_tasks: List[TodayTask]
+    outstanding_tasks: List[TodayTask]
 
 
 class SmallTask(_Base):
@@ -62,11 +63,6 @@ class SmallTask(_Base):
     order_number: int
     create_date: datetime
     to_do_date: date | None
-
-
-class IncomingTasks(_Base):
-    name: str = "Входящие"
-    tasks: List[SmallTask]
 
 
 class CreateProject(_Base):

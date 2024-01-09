@@ -30,7 +30,7 @@ class UsersDAO(BaseDAO):
     @classmethod
     async def create_user(cls, session: AsyncSession, data):
         await session.execute(
-                insert(cls.info_chema).
-                values(**data)
-            )
+            insert(cls.info_chema).
+            values(**data)
+        )
         await session.commit()

@@ -37,7 +37,7 @@ class Project(Base):
     id = Column(INTEGER(), primary_key=True)
     name = Column(VARCHAR(255), nullable=False)
     date = Column(DATETIME(timezone=True), server_default=func.now())
-    # is_favorites = Column(BOOLEAN(), server_default="0")
+    is_incoming = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
 
     tasks: Mapped[list[Task]] = relationship()
@@ -64,9 +64,9 @@ class Task(Base):
     name = Column(VARCHAR(255), nullable=False)
     description = Column(TEXT(), nullable=False)
     owner = Column(VARCHAR(255), nullable=False)
-    project_id = Column(INTEGER(), ForeignKey(Project.id), nullable=True)
+    project_id = Column(INTEGER(), ForeignKey(Project.id))
     create_date = Column(DATETIME(timezone=True), server_default=func.now())
-    section_id = Column(INTEGER(), ForeignKey(Sections.id), nullable=True)
+    section_id = Column(INTEGER(), ForeignKey(Sections.id))
     status = Column(BOOLEAN(), server_default="1")
     order_number = Column(INTEGER(), nullable=False)
     to_do_date = Column(DATE(), nullable=False)
@@ -104,7 +104,6 @@ class UserInfo(Base):
     login = Column(ForeignKey(User.login), nullable=False)
     first_name = Column(VARCHAR(100), nullable=False)
     second_name = Column(VARCHAR(100), nullable=False)
-    last_name = Column(VARCHAR(100), nullable=False)
 
     user_data: Mapped[User] = relationship()
 

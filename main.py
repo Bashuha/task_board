@@ -2,6 +2,9 @@ from fastapi import FastAPI, HTTPException, Request
 import uvicorn
 from database.config import API
 from fastapi.responses import JSONResponse
+import logging
+from pathlib import Path
+from logging.handlers import RotatingFileHandler
 
 from projects.route import router as project_router
 from tasks.route import router as task_router
@@ -26,7 +29,41 @@ async def error_handler(request: Request, exc: HTTPException):
     return JSONResponse(status_code=exc.status_code,
                         content={"message": f'{exc.detail}'})
 
+
+# log = logging.getLogger(__name__)
+# log.setLevel(logging.INFO)
+
+# @app.on_event("startup")
+# async def startup_event():
+#     Path('logs').mkdir(mode=0o774, exist_ok=True)
+#     logger = logging.getLogger("uvicorn.error")
+#     handler = RotatingFileHandler(
+#         "logs/unexpected_exceptions.log",
+#         mode="a",
+#         maxBytes = 100*1024,
+#         backupCount = 3,
+#     )
+#     handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+#     logger.addHandler(handler)
+
+
 # port 5017
 if __name__ == '__main__':
     app.root_path = '/to_do_list'
+
+    log = logging.getLogger(__name__)
+    log.setLevel(logging.INFO)
+
+    @app.on_event("startup")
+    async def startup_event():
+        Path('logs').mkdir(mode=0o774, exist_ok=True)
+        logger = logging.getLogger("uvicorn.error")
+        handler = RotatingFileHandler(
+            "logs/unexpected_exceptions.log",
+            mode="a",
+            maxBytes = 100*1024,
+            backupCount = 3,
+        )
+        handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
+        logger.addHandler(handler)
     uvicorn.run(app, host= API.get('host'), port= API.getint('port'))

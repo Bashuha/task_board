@@ -12,7 +12,6 @@ class UserResgisetr(_Base):
     password: str
     first_name: str
     second_name: str
-    last_name: str
 
 
 class UserLogin(_Base):
@@ -25,4 +24,3 @@ class UserInfo(_Base):
     login: str
     first_name: str
     second_name: str
-    last_name: str

@@ -78,14 +78,6 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
         task_data['section_id'] = project.section_id
         task_number = task_query.one()
         task_data['order_number'] = task_number.task_count + 1
-    else:
-        task_query = await session.execute(
-            select(func.count(Task.id).label('task_count')).
-            where(Task.project_id == None).
-            where(Task.owner == user.login)
-        )
-        task_number = task_query.scalar_one()
-        task_data['order_number'] = task_number + 1
         
     task_data['owner'] = user.login
         
@@ -117,13 +109,28 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
             task_data['order_number'] = task_number.task_count + 1
         task_data["project_id"] = project_id
     # если id раздела не передают, то нужно проверить существование переданного проекта
+    # и взять оттуда id основного раздела
     elif task_data.get('project_id'):
-        project_query = await session.execute(select(Project.id).where(Project.id == task_data['project_id']))
-        project = project_query.scalar_one_or_none()
+        project_query = await session.execute(
+            select(Project.id, Sections.id.label('section_id')).
+            join(Sections, isouter=True).
+            where(Project.id == task_data['project_id']).
+            where(Sections.is_basic == True)
+        )
+        project = project_query.one_or_none()
+        task_data['section_id'] = project.section_id
+        # далее берем количество задач у проекта в основом разделе
+        task_query = await session.execute(
+            select(Project.id, func.count(Task.id).label('task_count')).
+            join(Task, isouter=True).
+            where(Project.id == task_data['project_id']).
+            where(Sections.id == project.section_id)
+        )
+        task_number = task_query.one()
+        task_data['order_number'] = task_number.task_count + 1
         # при переносе задачи в другой проект или во "Входящие", задача по умолчанию будет вне разделов
         if not project:
             raise HTTPException(detail="Проект не найден", status_code=status.HTTP_404_NOT_FOUND)
-        task_data['section_id'] = None
     # далее просто обновляем все данные в объекте Task и комитим
     await session.execute(
         update(Task).

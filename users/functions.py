@@ -3,11 +3,15 @@ from users.dao import UsersDAO
 from fastapi import HTTPException
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, update
 from jose import jwt, JWTError
+from database.schemas import UserInfo, Project
 from database.config import JWT
 from database.my_engine import get_db
 from datetime import datetime, timedelta, timezone
 from fastapi import Request, Response, status, HTTPException, Depends
+from projects.model import CreateProject
+from projects.functions import create_project
 
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -31,6 +35,16 @@ async def register_user(user_data: model.UserResgisetr, session: AsyncSession):
         data=user_data.model_dump(exclude={'password'}),
         session=session                                            
     )
+    user_query = await session.execute(select(UserInfo).where(UserInfo.login == user_data.login))
+    user = user_query.scalar_one_or_none()
+    project = CreateProject(name="Входящие")
+    project_id = await create_project(project, user, session)
+    await session.execute(
+        update(Project).
+        where(Project.id == project_id).
+        values(is_incoming=True)
+    )
+    await session.commit()
 
 
 def create_token(data: dict):
@@ -48,8 +62,8 @@ def update_token(user_id, response: Response):
             "type": "access"
         }
     )
-    expire_key = datetime.now(timezone(timedelta(hours=3)).utc) + timedelta(minutes=10)
-    response.set_cookie("access_token", access_token, expires=expire_key, httponly=True)
+    expire_access = datetime.now(timezone(timedelta(hours=3)).utc) + timedelta(minutes=10)
+    response.set_cookie("access_token", access_token, expires=expire_access, httponly=True)
     
     refresh_token = create_token(
         {
@@ -107,7 +121,7 @@ async def get_current_user(session: AsyncSession = Depends(get_db), token: str =
 
 
 async def check_user(request: Request, session: AsyncSession):
-    token = request.cookies.get('access_token')
+    token = request.cookies.get('refresh_token')
     if not token:
         return False
     try:

@@ -20,6 +20,7 @@ async def get_projects(user: UserInfo, session: AsyncSession):
                 Project.id,
                 Project.is_archive,
                 Project.name,
+                Project.is_incoming,
             ),
             joinedload(Project.sections).load_only(
                 Sections.id,
@@ -35,11 +36,11 @@ async def get_projects(user: UserInfo, session: AsyncSession):
         where(
             ProjectUser.user_id == user.id
         ).
-        where(Project.is_incoming == False).
         group_by(
             Project.id,
             Project.is_archive,
             Project.name,
+            Project.is_incoming,
             ProjectUser.is_favorites,
         )
     )

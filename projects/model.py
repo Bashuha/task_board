@@ -98,6 +98,7 @@ class ProjectForList(_Base):
     label: str = Field(validation_alias='name')
     is_favorites: bool = False
     is_archive: bool
+    is_incoming: bool
     value: int = Field(validation_alias='id')
     task_count: int = 0
     sections: List[SmallSection] = Field(validation_alias='sections')

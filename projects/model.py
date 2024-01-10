@@ -32,6 +32,7 @@ class ProjectDetails(_Base):
     id: int | None
     name: str
     is_favorites: bool
+    me_admin: bool
     sections: List[SectionForDetails]
     open_tasks: List[TaskForDetails]
     close_tasks: List[TaskForDetails]
@@ -106,6 +107,18 @@ class ProjectForList(_Base):
 
 class ProjectList(_Base):
     projects: List[ProjectForList]
+
+
+class ProjectUserInfo(_Base):
+    user_id: int
+    is_owner: bool
+    first_name: str
+    second_name: str
+    login: str
+
+
+class ProjectUserList(_Base):
+    users_list: List[ProjectUserInfo]
 
 
 class NotFoundError(_Base):

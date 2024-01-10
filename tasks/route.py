@@ -2,7 +2,7 @@ from database.my_engine import get_db
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import tasks.functions as task_func
-from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, TaskOrder
+from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, TaskOrder, TaskList
 from users.functions import get_current_user
 from database.schemas import UserInfo
 
@@ -36,6 +36,20 @@ async def get_task_details(
     user: UserInfo = Depends(get_current_user)
 ):
     return await task_func.get_task_details(task_id, session, user)
+
+
+@router.get(
+    '/task_list',
+    status_code=status.HTTP_200_OK,
+    response_model=TaskList,
+    summary='Получение всех твоих задач'
+)
+async def get_task_list(
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await task_func.get_task_list(session, user)
+
 
 
 @router.post(

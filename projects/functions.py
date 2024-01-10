@@ -2,10 +2,22 @@ from database.schemas import Project, Sections, Task, Comments, UserInfo, Projec
 from sqlalchemy import insert, update, select, delete, func
 from sqlalchemy.orm import joinedload, load_only, noload
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import IntegrityError
 from projects.model import CreateProject, EditProject, ChangeArchiveStatus
 from fastapi import status, HTTPException
 import projects.model as my_model
 from datetime import datetime
+
+
+async def check_link(project_id: int, user_id: int, session: AsyncSession):
+    project_query = await session.execute(
+        select(ProjectUser.project_id).
+        where(ProjectUser.project_id == project_id).
+        where(ProjectUser.user_id == user_id).
+        where(ProjectUser.is_owner == True)
+    )
+    project_model: Project = project_query.scalar_one_or_none()
+    return project_model
 
 
 async def get_projects(user: UserInfo, session: AsyncSession):
@@ -62,15 +74,14 @@ async def get_projects(user: UserInfo, session: AsyncSession):
     return project_list
 
 
-async def check_user_project(project_id, session: AsyncSession, user: UserInfo):
+async def check_user_project(project_id, user_id: int, session: AsyncSession):
     check_user_query = await session.execute(
-        select(ProjectUser).
+        select(ProjectUser.project_id).
         where(ProjectUser.project_id == project_id).
-        where(ProjectUser.user_id == user.id)
+        where(ProjectUser.user_id == user_id)
     )
-    check_user = check_user_query.one_or_none()
-    if not check_user:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail='вы не можете взаимодействовать с проектами, в которых вас нет')
+    check_user = check_user_query.scalar_one_or_none()
+    return check_user
 
 
 def create_today_task_model(task: Task):
@@ -163,7 +174,6 @@ def create_task(task: Task):
 
 async def project_details(project_id: int | None, session: AsyncSession, user: UserInfo):
     if project_id:
-        await check_user_project(project_id, session, user)
         project_query = await session.execute(
             select(Project, ProjectUser.is_favorites.label('is_favorites')).
             options(
@@ -219,6 +229,8 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
         sorted_active_tasks: list[my_model.TaskForDetails] = sorted(active_list, key=lambda task_model: task_model.order_number)
         sorted_close_tasks: list[my_model.TaskForDetails] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
         sorted_sections = sorted(project.sections, key=lambda section_model: section_model.order_number)
+        
+        me_admin = await check_link(project.id, user.id, session)
 
         project_object = my_model.ProjectDetails(
             id=project.id,
@@ -227,6 +239,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
             sections=sorted_sections,
             open_tasks=sorted_active_tasks,
             close_tasks=sorted_close_tasks,
+            me_admin=True if me_admin else False,
         )
     else:
         project_query = await session.execute(
@@ -286,6 +299,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
             sections=sorted_sections,
             open_tasks=sorted_active_tasks,
             close_tasks=sorted_close_tasks,
+            me_admin=True,
         )
 
     return project_object
@@ -293,7 +307,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
 
 async def create_project(project: CreateProject, user: UserInfo, session: AsyncSession):
     # сначала создаем проект
-    project_data = Project(name=project.name)
+    project_data = Project(name=project.name, owner=user.login)
     session.add(project_data)
     await session.commit()
     # после чего создаем ему основной раздел
@@ -307,6 +321,7 @@ async def create_project(project: CreateProject, user: UserInfo, session: AsyncS
             project_id=project_data.id,
             user_id=user.id,
             is_favorites=project.is_favorites,
+            is_owner=True,
         )
     )
     await session.commit()
@@ -314,7 +329,6 @@ async def create_project(project: CreateProject, user: UserInfo, session: AsyncS
 
 
 async def edit_project(project: EditProject, session: AsyncSession, user: UserInfo):
-    await check_user_project(project.id, session, user)
 
     update_project_data = project.model_dump(exclude={'id'}, exclude_unset=True)
     if update_project_data.get('is_favorites') is not None:
@@ -325,48 +339,117 @@ async def edit_project(project: EditProject, session: AsyncSession, user: UserIn
             values(is_favorites=update_project_data.pop('is_favorites'))
         )
     if update_project_data:
-        await session.execute(
-            update(Project).
-            where(Project.id==project.id).
-            where(Project.is_incoming == False).
-            values(update_project_data)
-        )
+        project_model = await check_link(project.id, user.id, session)
+
+        if project_model:
+            await session.execute(
+                update(Project).
+                where(Project.id == project.id).
+                where(Project.is_incoming == False).
+                where(Project.owner == user.login).
+                values(update_project_data)
+            )
     await session.commit()
 
 
 async def delete_from_archive(project_id: int, session: AsyncSession, user: UserInfo):
-    await check_user_project(project_id, session, user)
 
-    project_query = await session.execute(
-        select(Project.id, Project.is_archive).
-        where(Project.id == project_id).
-        where(Project.is_incoming == False)
-    )
-    project_model: Project = project_query.one_or_none()
-    if not project_model:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
-    
-    delete_query = delete(Project).where(Project.id == project_id).where(Project.is_archive == True)
-    await session.execute(delete_query)
-    await session.commit()
+    project_model = await check_link(project_id, user.id, session)
+    if project_model:
+        await session.execute(
+            delete(Project).
+            where(Project.id == project_id).
+            where(Project.is_archive == True).
+            where(Project.is_incoming == False)
+        )
+        await session.commit()
 
 
 async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSession, user: UserInfo):
-    await check_user_project(project.id, session, user)
+    project_model = await check_link(project.id, user.id, session)
+    if project_model:
+        await session.execute(
+            update(Project).
+            where(Project.id == project.id).
+            where(Project.is_incoming == False).
+            values(is_archive=project.is_archive)
+        )
+        await session.execute(
+            update(ProjectUser).
+            where(ProjectUser.project_id == project.id).
+            values(is_favorites=False)
+        )
+        await session.commit()
 
-    project_query = await session.execute(select(Project.id).where(Project.id == project.id))
-    project_id = project_query.scalar_one_or_none()
-    if not project_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
-    await session.execute(
-        update(Project).
-        where(Project.id == project.id).
-        where(Project.is_incoming == False).
-        values(is_archive=project.is_archive)
+
+async def add_user_to_project(
+    login: str,
+    project_id: int,
+    session: AsyncSession,
+    user: UserInfo
+):
+    # берем id пользователя, которого хотим добавить в проект
+    user_id_query = await session.execute(
+        select(UserInfo.id).
+        where(UserInfo.login == login)
     )
-    await session.execute(
-        update(ProjectUser).
-        where(ProjectUser.project_id == project.id).
-        values(is_favorites=False)
-    )
-    await session.commit()
+    user_id = user_id_query.scalar_one_or_none()
+    # далее проверяем есть ли такая связка в таблице
+    # может ли текущий пользователь добавлять кого-то в проект
+    check_root = await check_link(project_id, user.id, session)
+    if user_id and check_root:
+        try:
+            await session.execute(
+                insert(ProjectUser).
+                values(
+                    user_id=user_id,
+                    project_id=project_id
+                )
+            )
+            await session.commit()
+        except IntegrityError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="пользователь уже в проекте")
+        
+
+async def remove_user_from_project(
+    user_id: int,
+    project_id: int,
+    user: UserInfo,    
+    session: AsyncSession,
+):
+    check_root = await check_link(project_id, user.id, session)
+    if check_root:
+        await session.execute(
+            delete(ProjectUser).
+            where(ProjectUser.project_id == project_id).
+            where(ProjectUser.user_id == user_id)
+        )
+        await session.commit()
+
+
+async def project_user_list(project_id: int, user: UserInfo, session: AsyncSession):
+    check_root = await check_link(project_id, user.id, session)
+    if check_root:
+        users_query = await session.execute(
+            select(
+                ProjectUser.user_id,
+                ProjectUser.is_owner,
+                UserInfo.first_name,
+                UserInfo.second_name,
+                UserInfo.login,
+            ).
+            join(UserInfo, UserInfo.id == ProjectUser.user_id, isouter=True).
+            where(ProjectUser.project_id == project_id)
+        )
+        users = users_query.all()
+        users_list = my_model.ProjectUserList(users_list=list())
+        for user_info in users:
+            user_model = my_model.ProjectUserInfo(
+                user_id=user_info.user_id,
+                is_owner=user_info.is_owner,
+                first_name=user_info.first_name,
+                second_name=user_info.second_name,
+                login=user_info.login,
+            )
+            users_list.users_list.append(user_model)
+        return users_list

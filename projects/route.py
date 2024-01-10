@@ -11,7 +11,8 @@ from projects.model import (
     NotFoundError,
     BadRequestError,
     TodayTaskList,
-    ProjectDetails
+    ProjectDetails,
+    ProjectUserList
 )
 from users.functions import get_current_user
 
@@ -128,3 +129,49 @@ async def get_today_tasks(
     user: UserInfo = Depends(get_current_user)    
 ):
     return await project_func.get_today_tasks(session, user)
+
+
+@router.post(
+    '/add_user',
+    status_code=status.HTTP_200_OK,
+    summary='Добавление пользователя в проект'
+)
+async def add_user_to_project(
+    login: str,
+    project_id: int,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await project_func.add_user_to_project(
+        login, project_id, session, user
+    )
+
+
+@router.delete(
+    '/remove_user',
+    status_code=status.HTTP_200_OK,
+    summary="Удаление пользователя из проекта"
+)
+async def remove_user_from_project(
+    user_id: int,
+    project_id: int,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await project_func.remove_user_from_project(
+        project_id=project_id, user_id=user_id, session=session, user=user
+    )
+
+
+@router.get(
+    '/project_users',
+    status_code=status.HTTP_200_OK,
+    summary="Получить список всех пользователей проекта",
+    response_model=ProjectUserList
+)
+async def project_user_list(
+    project_id: int,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user),
+):
+    return await project_func.project_user_list(project_id, user, session)

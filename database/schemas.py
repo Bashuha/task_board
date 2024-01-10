@@ -31,6 +31,26 @@ class Base:
         return result
     
 
+class User(Base):
+    __tablename__ = "user"
+
+    login = Column(VARCHAR(50), primary_key=True)
+    password = Column(VARCHAR(255), nullable=False)
+    is_active = Column(BOOLEAN(), nullable=False, server_default='1')
+    date_create = Column(DATETIME(timezone=True), server_default=func.now())
+
+
+class UserInfo(Base):
+    __tablename__ = "user_info"
+
+    id = Column(INTEGER(), primary_key=True)
+    login = Column(ForeignKey(User.login), nullable=False)
+    first_name = Column(VARCHAR(100), nullable=False)
+    second_name = Column(VARCHAR(100), nullable=False)
+
+    user_data: Mapped[User] = relationship()
+
+
 class Project(Base):
     __tablename__ = "Project"
 
@@ -39,6 +59,7 @@ class Project(Base):
     date = Column(DATETIME(timezone=True), server_default=func.now())
     is_incoming = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
+    owner = Column(VARCHAR(50), ForeignKey(User.login), nullable=False)
 
     tasks: Mapped[list[Task]] = relationship()
     sections: Mapped[list[Sections]] = relationship()
@@ -88,32 +109,13 @@ class Comments(Base):
     Task: Mapped[Task] = relationship()
 
 
-class User(Base):
-    __tablename__ = "user"
-
-    login = Column(VARCHAR(50), primary_key=True)
-    password = Column(VARCHAR(255), nullable=False)
-    is_active = Column(BOOLEAN(), nullable=False, server_default='1')
-    date_create = Column(DATETIME(timezone=True), server_default=func.now())
-
-
-class UserInfo(Base):
-    __tablename__ = "user_info"
-
-    id = Column(INTEGER(), primary_key=True)
-    login = Column(ForeignKey(User.login), nullable=False)
-    first_name = Column(VARCHAR(100), nullable=False)
-    second_name = Column(VARCHAR(100), nullable=False)
-
-    user_data: Mapped[User] = relationship()
-
-
 class ProjectUser(Base):
     __tablename__ = 'project_user'
 
     project_id = Column(ForeignKey(Project.id), primary_key=True, nullable=False)
     user_id = Column(ForeignKey(UserInfo.id), primary_key=True, nullable=False)
-    is_favorites = Column(BOOLEAN(), nullable=False, server_default='0')
+    is_favorites = Column(BOOLEAN(), nullable=False, server_default="0")
+    is_owner = Column(BOOLEAN(), nullable=False, server_default="0")
 
     project_info: Mapped[Project] = relationship()
     user_info: Mapped[UserInfo] = relationship()

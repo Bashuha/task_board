@@ -346,7 +346,6 @@ async def edit_project(project: EditProject, session: AsyncSession, user: UserIn
                 update(Project).
                 where(Project.id == project.id).
                 where(Project.is_incoming == False).
-                where(Project.owner == user.login).
                 values(update_project_data)
             )
     await session.commit()
@@ -453,3 +452,21 @@ async def project_user_list(project_id: int, user: UserInfo, session: AsyncSessi
             )
             users_list.users_list.append(user_model)
         return users_list
+    
+
+async def change_admin(
+    project_id: int,
+    user_id: int,
+    is_owner: bool,
+    user: UserInfo,
+    session: AsyncSession,
+):
+    check_root = await check_link(project_id, user.id, session)
+    if check_root:
+        await session.execute(
+            update(ProjectUser).
+            where(ProjectUser.project_id == project_id).
+            where(ProjectUser.user_id == user_id).
+            values(is_owner=is_owner)
+        )
+        await session.commit()

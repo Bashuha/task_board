@@ -175,3 +175,24 @@ async def project_user_list(
     user: UserInfo = Depends(get_current_user),
 ):
     return await project_func.project_user_list(project_id, user, session)
+
+
+@router.put(
+    '/change_admin',
+    status_code=status.HTTP_200_OK,
+    summary="Дать/забрать права админа проекта"
+)
+async def change_admin(
+    project_id: int,
+    user_id: int,
+    is_owner: bool,
+    user: UserInfo = Depends(get_current_user),
+    session: AsyncSession = Depends(get_db)
+):
+    return await project_func.change_admin(
+        project_id,
+        user_id,
+        is_owner,
+        user,
+        session
+    )

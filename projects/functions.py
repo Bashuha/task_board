@@ -74,7 +74,7 @@ async def get_projects(user: UserInfo, session: AsyncSession):
     return project_list
 
 
-async def check_user_project(project_id, user_id: int, session: AsyncSession):
+async def check_user_project(project_id: int, user_id: int, session: AsyncSession):
     check_user_query = await session.execute(
         select(ProjectUser.project_id).
         where(ProjectUser.project_id == project_id).
@@ -82,25 +82,6 @@ async def check_user_project(project_id, user_id: int, session: AsyncSession):
     )
     check_user = check_user_query.scalar_one_or_none()
     return check_user
-
-
-def create_today_task_model(task: Task):
-    """
-    Функия для формирования модельки задачи
-    используется в get_today_tasks
-    """
-    task_object = my_model.TodayTask(
-        id=task.id,
-        name=task.name,
-        description=task.description,
-        status=task.status,
-        project_id=task.project_id,
-        project_name=task.project.name,
-        section_id=task.section_id,
-        section_name=task.sections.name,
-        comments_count=len(task.comments),
-    )
-    return task_object
 
 
 async def get_today_tasks(session: AsyncSession, user: UserInfo):
@@ -141,14 +122,17 @@ async def get_today_tasks(session: AsyncSession, user: UserInfo):
     )
 
     today_tasks = task_query.unique().scalars().all()
-    tasks_object = my_model.TodayTaskList(today_tasks=list(), outstanding_tasks=list())
+    outstanding_tasks = list()
+    today_tasks_list = list()
     for task in today_tasks:
         if task.to_do_date == today_date:
-            task_model: my_model.TodayTask = create_today_task_model(task)
-            tasks_object.today_tasks.append(task_model)
+            today_tasks_list.append(task)
         elif task.to_do_date < today_date:
-            task_model: my_model.TodayTask = create_today_task_model(task)
-            tasks_object.outstanding_tasks.append(task_model)
+            outstanding_tasks.append(task)
+    tasks_object = my_model.TodayTaskList(
+        today_tasks=today_tasks_list,
+        outstanding_tasks=outstanding_tasks
+    )
 
     return tasks_object
 
@@ -221,11 +205,11 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
         active_list = list()
         close_list = list()
         for task in project.tasks:
-            model_task = create_task(task)
+            # model_task = create_task(task)
             if task.status:
-                active_list.append(model_task)
+                active_list.append(task)
             else:
-                close_list.append(model_task)
+                close_list.append(task)
         sorted_active_tasks: list[my_model.TaskForDetails] = sorted(active_list, key=lambda task_model: task_model.order_number)
         sorted_close_tasks: list[my_model.TaskForDetails] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
         sorted_sections = sorted(project.sections, key=lambda section_model: section_model.order_number)
@@ -282,11 +266,11 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
         active_list = list()
         close_list = list()
         for task in project.tasks:
-            model_task = create_task(task)
+            # model_task = create_task(task)
             if task.status:
-                active_list.append(model_task)
+                active_list.append(task)
             else:
-                close_list.append(model_task)
+                close_list.append(task)
 
         sorted_active_tasks: list[my_model.TaskForDetails] = sorted(active_list, key=lambda task_model: task_model.order_number)
         sorted_close_tasks: list[my_model.TaskForDetails] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)

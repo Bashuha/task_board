@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import List
+from pydantic import BaseModel, Field, model_validator
+from typing import List, Any
 from datetime import date, datetime
 
 
@@ -22,10 +22,15 @@ class TaskForDetails(_Base):
     description: str | None
     section_id: int | None
     status: bool
-    comments_count: int
+    comments_count: Any = Field(validation_alias="comments")
     order_number: int
     create_date: datetime
     to_do_date: date | None
+
+    @model_validator(mode='after')
+    def change_field(self):
+        self.comments_count: int = len(self.comments_count)
+        return self
 
 
 class ProjectDetails(_Base):
@@ -44,26 +49,22 @@ class TodayTask(_Base):
     description: str
     status: bool
     project_id: int
-    project_name: str
     section_id: int
-    section_name: str
-    comments_count: int
+    project_name: Any = Field(validation_alias='project')
+    section_name: Any = Field(validation_alias='sections')
+    comments_count: Any = Field(validation_alias="comments")
+
+    @model_validator(mode='after')
+    def change_field(self):
+        self.project_name: str = self.project_name.name
+        self.section_name: str = self.section_name.name
+        self.comments_count: int = len(self.comments_count)
+        return self
 
 
 class TodayTaskList(_Base):
     today_tasks: List[TodayTask]
     outstanding_tasks: List[TodayTask]
-
-
-class SmallTask(_Base):
-    id: int
-    name: str
-    description: str | None
-    status: bool
-    comments_count: int
-    order_number: int
-    create_date: datetime
-    to_do_date: date | None
 
 
 class CreateProject(_Base):

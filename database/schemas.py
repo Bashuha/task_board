@@ -63,6 +63,7 @@ class Project(Base):
 
     tasks: Mapped[list[Task]] = relationship()
     sections: Mapped[list[Sections]] = relationship()
+    user_link: Mapped[list[ProjectUser]] = relationship()
 
 
 class Sections(Base):

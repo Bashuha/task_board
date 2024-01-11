@@ -2,7 +2,7 @@ from database.my_engine import get_db
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import tasks.functions as task_func
-from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, TaskOrder, TaskList
+from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, TaskOrder, TaskList, ChangeTaskStatus
 from users.functions import get_current_user
 from database.schemas import UserInfo
 
@@ -81,6 +81,19 @@ async def edit_task(
     user: UserInfo = Depends(get_current_user)
 ):
     return await task_func.edit_task(task, session, user)
+
+
+@router.put(
+    '/change_task_status',
+    status_code=status.HTTP_200_OK,
+    summary="Изменение статуса задачи"
+)
+async def change_task_status(
+    task: ChangeTaskStatus,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await task_func.change_task_status(task, user, session)
 
 
 @router.delete(

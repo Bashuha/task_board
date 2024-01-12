@@ -81,7 +81,8 @@ async def check_user_project(project_id: int, user_id: int, session: AsyncSessio
         where(ProjectUser.user_id == user_id)
     )
     check_user = check_user_query.scalar_one_or_none()
-    return check_user
+    if not check_user:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail='нет доступа к проекту')
 
 
 async def get_today_tasks(session: AsyncSession, user: UserInfo):

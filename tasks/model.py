@@ -68,7 +68,6 @@ class CreateTask(_Base):
     description: str | None = None
     to_do_date: date | None = None
     section_id: int
-    project_id: int
 
 
 class EditTask(_Base):

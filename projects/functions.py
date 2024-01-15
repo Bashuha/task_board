@@ -9,7 +9,7 @@ import projects.model as my_model
 from datetime import datetime
 
 
-async def check_link(project_id: int, user_id: int, session: AsyncSession):
+async def check_link_owner(project_id: int, user_id: int, session: AsyncSession):
     project_query = await session.execute(
         select(ProjectUser.project_id).
         where(ProjectUser.project_id == project_id).
@@ -174,22 +174,16 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                         Sections.is_basic,
                     ),
                 joinedload(Project.tasks).
-                    load_only(
-                        Task.id,
-                        Task.name,
-                        Task.status,
-                        Task.description,
-                        Task.order_number,
-                        Task.create_date,
-                        Task.section_id,
-                        Task.to_do_date,
-                    ).
                     joinedload(
                         Task.comments
                     ).
                     load_only(
                         Comments.id
-                    )
+                    ),
+                joinedload(Project.tasks).
+                    joinedload(Task.executor_info),
+                joinedload(Project.tasks).
+                    joinedload(Task.owner_info)
             ).
             join(ProjectUser, isouter=True).
             where(Project.id == project_id).
@@ -198,7 +192,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
         )
         project_info = project_query.unique().one_or_none()
         if not project_info:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Проект не найден")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="проект не найден")
         
         project: Project = project_info[0]
         is_favorites = project_info[1]
@@ -215,7 +209,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
         sorted_close_tasks: list[my_model.TaskForDetails] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
         sorted_sections = sorted(project.sections, key=lambda section_model: section_model.order_number)
         
-        me_admin = await check_link(project.id, user.id, session)
+        me_admin = await check_link_owner(project.id, user.id, session)
 
         project_object = my_model.ProjectDetails(
             id=project.id,
@@ -314,7 +308,6 @@ async def create_project(project: CreateProject, user: UserInfo, session: AsyncS
 
 
 async def edit_project(project: EditProject, session: AsyncSession, user: UserInfo):
-
     update_project_data = project.model_dump(exclude={'id'}, exclude_unset=True)
     if update_project_data.get('is_favorites') is not None:
         await session.execute(
@@ -324,7 +317,7 @@ async def edit_project(project: EditProject, session: AsyncSession, user: UserIn
             values(is_favorites=update_project_data.pop('is_favorites'))
         )
     if update_project_data:
-        project_model = await check_link(project.id, user.id, session)
+        project_model = await check_link_owner(project.id, user.id, session)
 
         if project_model:
             await session.execute(
@@ -336,122 +329,37 @@ async def edit_project(project: EditProject, session: AsyncSession, user: UserIn
     await session.commit()
 
 
-async def delete_from_archive(project_id: int, session: AsyncSession, user: UserInfo):
-
-    project_model = await check_link(project_id, user.id, session)
-    if project_model:
-        await session.execute(
-            delete(Project).
-            where(Project.id == project_id).
-            where(Project.is_archive == True).
-            where(Project.is_incoming == False)
+async def exit_project(project_id: int, session: AsyncSession, user: UserInfo):
+    check_root = check_link_owner(project_id, user.id, session)
+    if check_root:
+        new_admin_query = await session.execute(
+            select(ProjectUser.user_id).
+            where(ProjectUser.project_id == project_id).
+            where(ProjectUser.is_owner == False)
         )
-        await session.commit()
-
-
-async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSession, user: UserInfo):
-    project_model = await check_link(project.id, user.id, session)
-    if project_model:
-        await session.execute(
-            update(Project).
-            where(Project.id == project.id).
-            where(Project.is_incoming == False).
-            values(is_archive=project.is_archive)
-        )
-        await session.execute(
-            update(ProjectUser).
-            where(ProjectUser.project_id == project.id).
-            values(is_favorites=False)
-        )
-        await session.commit()
-
-
-async def add_user_to_project(
-    login: str,
-    project_id: int,
-    session: AsyncSession,
-    user: UserInfo
-):
-    # берем id пользователя, которого хотим добавить в проект
-    user_id_query = await session.execute(
-        select(UserInfo.id).
-        where(UserInfo.login == login)
-    )
-    user_id = user_id_query.scalar_one_or_none()
-    # далее проверяем есть ли такая связка в таблице
-    # может ли текущий пользователь добавлять кого-то в проект
-    check_root = await check_link(project_id, user.id, session)
-    if user_id and check_root:
-        try:
+        new_admin_id = new_admin_query.scalar_one_or_none()
+        if new_admin_id:
             await session.execute(
-                insert(ProjectUser).
-                values(
-                    user_id=user_id,
-                    project_id=project_id
-                )
+                update(ProjectUser).
+                where(ProjectUser.project_id == project_id).
+                where(ProjectUser.user_id == new_admin_id).
+                values(is_owner=True)    
             )
             await session.commit()
-        except IntegrityError:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="пользователь уже в проекте")
-        
-
-async def remove_user_from_project(
-    user_id: int,
-    project_id: int,
-    user: UserInfo,    
-    session: AsyncSession,
-):
-    check_root = await check_link(project_id, user.id, session)
-    if check_root:
-        await session.execute(
-            delete(ProjectUser).
-            where(ProjectUser.project_id == project_id).
-            where(ProjectUser.user_id == user_id)
+            # доделать удаление проекта если админа передать некому
+    await session.execute(
+        delete(ProjectUser).
+        where(ProjectUser.project_id == project_id).
+        where(ProjectUser.user_id == user.id)
+    )
+    await session.execute(
+            update(Task).
+            where(Task.executor_id == user.id).
+            values(executor_id=None)    
         )
-        await session.commit()
-
-
-async def project_user_list(project_id: int, user: UserInfo, session: AsyncSession):
-    check_root = await check_link(project_id, user.id, session)
-    if check_root:
-        users_query = await session.execute(
-            select(
-                ProjectUser.user_id,
-                ProjectUser.is_owner,
-                UserInfo.first_name,
-                UserInfo.second_name,
-                UserInfo.login,
-            ).
-            join(UserInfo, UserInfo.id == ProjectUser.user_id, isouter=True).
-            where(ProjectUser.project_id == project_id)
-        )
-        users = users_query.all()
-        users_list = my_model.ProjectUserList(users_list=list())
-        for user_info in users:
-            user_model = my_model.ProjectUserInfo(
-                user_id=user_info.user_id,
-                is_owner=user_info.is_owner,
-                first_name=user_info.first_name,
-                second_name=user_info.second_name,
-                login=user_info.login,
-            )
-            users_list.users_list.append(user_model)
-        return users_list
-    
-
-async def change_admin(
-    project_id: int,
-    user_id: int,
-    is_owner: bool,
-    user: UserInfo,
-    session: AsyncSession,
-):
-    check_root = await check_link(project_id, user.id, session)
-    if check_root:
-        await session.execute(
-            update(ProjectUser).
-            where(ProjectUser.project_id == project_id).
-            where(ProjectUser.user_id == user_id).
-            values(is_owner=is_owner)
-        )
-        await session.commit()
+    await session.execute(
+        update(Task).
+        where(Task.owner_id == user.id).
+        values(owner_id=None)    
+    )
+    await session.commit()

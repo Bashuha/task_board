@@ -1,4 +1,4 @@
-from projects.functions import check_link
+from projects.functions import check_link_owner
 from sqlalchemy import insert, update, delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sections.model import CreateSection, EditSection, SectionOrder, DeleteSection
@@ -7,7 +7,7 @@ from database.schemas import Project, Sections, UserInfo
 
 
 async def create_section(section: CreateSection, session: AsyncSession, user: UserInfo):
-    check_root = await check_link(section.project_id, user.id, session)
+    check_root = await check_link_owner(section.project_id, user.id, session)
     if check_root:
         project_query = await session.execute(
             select(Project.id, func.count(Sections.id).label("section_count")).
@@ -26,7 +26,7 @@ async def create_section(section: CreateSection, session: AsyncSession, user: Us
 
 
 async def edit_section(section: EditSection, session: AsyncSession, user: UserInfo):
-    check_root = await check_link(section.project_id, user.id, session)
+    check_root = await check_link_owner(section.project_id, user.id, session)
     if check_root:
         section_data = section.model_dump(exclude={'id'})
         await session.execute(
@@ -39,7 +39,7 @@ async def edit_section(section: EditSection, session: AsyncSession, user: UserIn
 
 
 async def delete_section(section: DeleteSection, session: AsyncSession, user: UserInfo):
-    check_root = await check_link(section.project_id, user.id, session)
+    check_root = await check_link_owner(section.project_id, user.id, session)
     if check_root:
         delete_query = delete(Sections).where(Sections.id == section.id).where(Sections.is_basic == False)
         await session.execute(delete_query)
@@ -47,7 +47,7 @@ async def delete_section(section: DeleteSection, session: AsyncSession, user: Us
 
 
 async def change_section_order(section_order: SectionOrder, session: AsyncSession, user: UserInfo):
-    check_root = await check_link(section_order.project_id, user.id, session)
+    check_root = await check_link_owner(section_order.project_id, user.id, session)
     if check_root:
         new_order_list = list()
         sections_qr = select(Sections).where(Sections.project_id == section_order.project_id).order_by(Sections.order_number)

@@ -3,6 +3,7 @@ from database.schemas import UserInfo
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import projects.functions as project_func
+import projects.admin_func as admin_func
 from projects.model import (
     ProjectList,
     CreateProject,
@@ -85,7 +86,7 @@ async def change_archive_status(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await project_func.change_archive_status(project, session, user)
+    return await admin_func.change_archive_status(project, session, user)
 
 
 @router.delete(
@@ -102,7 +103,7 @@ async def delete_from_archive(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await project_func.delete_from_archive(project_id, session, user)
+    return await admin_func.delete_from_archive(project_id, session, user)
 
 
 @router.get(
@@ -142,7 +143,7 @@ async def add_user_to_project(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await project_func.add_user_to_project(
+    return await admin_func.add_user_to_project(
         login, project_id, session, user
     )
 
@@ -158,7 +159,7 @@ async def remove_user_from_project(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await project_func.remove_user_from_project(
+    return await admin_func.remove_user_from_project(
         project_id=project_id, user_id=user_id, session=session, user=user
     )
 
@@ -174,7 +175,7 @@ async def project_user_list(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user),
 ):
-    return await project_func.project_user_list(project_id, user, session)
+    return await admin_func.project_user_list(project_id, user, session)
 
 
 @router.put(
@@ -189,10 +190,23 @@ async def change_admin(
     user: UserInfo = Depends(get_current_user),
     session: AsyncSession = Depends(get_db)
 ):
-    return await project_func.change_admin(
+    return await admin_func.change_admin(
         project_id,
         user_id,
         is_owner,
         user,
         session
     )
+
+
+@router.delete(
+    '/exit_project',
+    status_code=status.HTTP_200_OK,
+    summary='Выйти из проекта'
+)
+async  def exit_project(
+    project_id: int,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await project_func.exit_project(project_id, session, user)

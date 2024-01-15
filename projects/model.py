@@ -9,6 +9,13 @@ class _Base(BaseModel):
         from_attributes=True
 
 
+class UserInfo(_Base):
+    id: int
+    login: str
+    first_name: str
+    second_name: str
+
+
 class SectionForDetails(_Base):
     value: int = Field(validation_alias='id')
     label: str = Field(validation_alias='name')
@@ -26,6 +33,8 @@ class TaskForDetails(_Base):
     order_number: int
     create_date: datetime
     to_do_date: date | None
+    owner_info: UserInfo | None
+    executor_info: UserInfo | None
 
     @model_validator(mode='after')
     def change_field(self):

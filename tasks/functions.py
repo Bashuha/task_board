@@ -33,7 +33,7 @@ async def get_task_list(session: AsyncSession, user: UserInfo):
                 )
         ).
         where(
-            Task.owner == user.login
+            Task.owner_id == user.id
         ).
         where(
             Task.status == True
@@ -45,13 +45,15 @@ async def get_task_list(session: AsyncSession, user: UserInfo):
     return task_list_object
 
 
-async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):   
+async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):  
     task_query = await session.execute(
         select(Task).
         options(
             joinedload(Task.comments),
             joinedload(Task.sections).load_only(Sections.name),
-            joinedload(Task.project).load_only(Project.name)
+            joinedload(Task.project).load_only(Project.name),
+            joinedload(Task.executor_info),
+            joinedload(Task.owner_info)
         ).
         where(Task.id == task_id)
     )
@@ -65,17 +67,19 @@ async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):
 async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     # есть ли пользователь в проекте
     task_query = await session.execute(
-        select(Sections.id, Sections.project_id, func.MAX(Task.order_number).label('task_count')).
+        select(Sections.id, Sections.project_id, func.count(Task.order_number).label('task_count')).
         join(Task, isouter=True).
-        where(Task.status == True).
+        # where(Task.status == True).
         where(Sections.id == task.section_id)
     )
     task_info = task_query.one()
     await check_user_project(task_info.project_id, user.id, session)
+    if task.executor_id:
+        await check_user_project(task_info.project_id, task.executor_id, session)
     
     task_data = task.model_dump(exclude_unset=True)
     task_data['order_number'] = task_info.task_count + 1
-    task_data['owner'] = user.login
+    task_data['owner_id'] = user.id
     task_data['project_id'] = task_info.project_id
         
     await session.execute(insert(Task).values(task_data))
@@ -88,6 +92,8 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
     if not project_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='задача не найдена')
     await check_user_project(project_id, user.id, session)
+    if task.executor_id:
+        await check_user_project(project_id, task.executor_id, session)
     task_data = task.model_dump(exclude={'id'}, exclude_unset=True)
     # если нам передают id раздела, то id проекта мы присваиваем сами
     if task_data.get('section_id'):

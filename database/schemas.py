@@ -85,7 +85,8 @@ class Task(Base):
     id = Column(INTEGER(), primary_key=True)
     name = Column(VARCHAR(255), nullable=False)
     description = Column(TEXT(), nullable=False)
-    owner = Column(VARCHAR(255), nullable=False)
+    owner_id = Column(INTEGER(), ForeignKey(UserInfo.id), nullable=True)
+    executor_id = Column(INTEGER(), ForeignKey(UserInfo.id), nullable=True)
     project_id = Column(INTEGER(), ForeignKey(Project.id))
     create_date = Column(DATETIME(timezone=True), server_default=func.now())
     section_id = Column(INTEGER(), ForeignKey(Sections.id))
@@ -96,6 +97,8 @@ class Task(Base):
     project: Mapped[Project] = relationship()
     sections: Mapped[Sections] = relationship()
     comments: Mapped[list[Comments]] = relationship()
+    executor_info: Mapped[UserInfo] = relationship(foreign_keys=[executor_id])
+    owner_info: Mapped[UserInfo] = relationship(foreign_keys=[owner_id])
 
 
 class Comments(Base):

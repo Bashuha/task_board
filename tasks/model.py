@@ -12,6 +12,13 @@ class _Base(BaseModel):
         from_attributes=True
 
 
+class UserInfo(_Base):
+    id: int
+    login: str
+    first_name: str
+    second_name: str
+
+
 class Comment(_Base):
     create_at: datetime
     id: int
@@ -31,7 +38,8 @@ class Task(_Base):
     status: bool
     id: int
     name: str
-    owner: str
+    owner_info: UserInfo | None
+    executor_info: UserInfo | None
 
     @model_validator(mode='after')
     def change_field(self):
@@ -67,12 +75,14 @@ class CreateTask(_Base):
     name: str
     description: str | None = None
     to_do_date: date | None = None
+    executor_id: int | None = None
     section_id: int
 
 
 class EditTask(_Base):
     id: int
     name: str = "New name"
+    executor_id: int | None = None
     description: str = "New description"
     section_id: int | None = None
     to_do_date: date | None = None

@@ -1,5 +1,5 @@
-from database.schemas import Project, Sections, Task, UserInfo, Comments
-from sqlalchemy import insert, update, delete, select, func
+from database.schemas import Project, Sections, Task, UserInfo, Comments, ProjectUser
+from sqlalchemy import insert, update, delete, select, func, or_
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 from tasks.model import CreateTask, EditTask
@@ -9,6 +9,11 @@ from projects.functions import check_user_project
 
 
 async def get_task_list(session: AsyncSession, user: UserInfo):
+    project_ids_query = await session.execute(
+        select(ProjectUser.project_id).
+        where(ProjectUser.user_id == user.id)
+    )
+    project_ids = project_ids_query.scalars().all()
     task_query = await session.execute(
         select(Task).options(
             load_only(
@@ -33,10 +38,13 @@ async def get_task_list(session: AsyncSession, user: UserInfo):
                 )
         ).
         where(
-            Task.owner_id == user.id
+            or_(Task.executor_id == user.id, Task.executor_id == None)
         ).
         where(
             Task.status == True
+        ).
+        where(
+            Task.project_id.in_(project_ids)
         )
     )
     task_list: list[Task] = task_query.unique().scalars().all()

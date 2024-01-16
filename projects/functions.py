@@ -1,8 +1,7 @@
 from database.schemas import Project, Sections, Task, Comments, UserInfo, ProjectUser
 from sqlalchemy import insert, update, select, delete, func, or_, and_
-from sqlalchemy.orm import joinedload, load_only, noload
+from sqlalchemy.orm import joinedload, load_only, noload, contains_eager
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.exc import IntegrityError
 from projects.model import CreateProject, EditProject, ChangeArchiveStatus
 from fastapi import status, HTTPException
 import projects.model as my_model
@@ -87,6 +86,11 @@ async def check_user_project(project_id: int, user_id: int, session: AsyncSessio
 
 async def get_today_tasks(session: AsyncSession, user: UserInfo):
     today_date = datetime.today().date()
+    project_ids_query = await session.execute(
+        select(ProjectUser.project_id).
+        where(ProjectUser.user_id == user.id)
+    )
+    project_ids = project_ids_query.scalars().all()
     task_query = await session.execute(
         select(Task).options(
             load_only(
@@ -112,13 +116,14 @@ async def get_today_tasks(session: AsyncSession, user: UserInfo):
                 )
         ).
         where(
-            Task.to_do_date <= today_date
-        ).
-        where(
-            or_(Task.executor_id == user.id, and_(Task.executor_id == None, Task.owner_id == user.id))
-        ).
-        where(
+            Task.to_do_date <= today_date,
             Task.status == True
+        ).
+        where(
+            or_(Task.executor_id == user.id, Task.executor_id == None)
+        ).
+        where(
+            Task.project_id.in_(project_ids)
         )
     )
 
@@ -251,7 +256,11 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                     ).
                     load_only(
                         Comments.id
-                    )
+                    ),
+                joinedload(Project.tasks).
+                    joinedload(Task.executor_info),
+                joinedload(Project.tasks).
+                    joinedload(Task.owner_info),
             ).
             join(ProjectUser, isouter=True).
             where(Project.is_incoming == True).
@@ -330,36 +339,65 @@ async def edit_project(project: EditProject, session: AsyncSession, user: UserIn
 
 
 async def exit_project(project_id: int, session: AsyncSession, user: UserInfo):
-    check_root = check_link_owner(project_id, user.id, session)
-    if check_root:
-        new_admin_query = await session.execute(
+    # для начала проверим, является ли пользователь админом
+    check_root = await check_link_owner(project_id, user.id, session)
+    trigger = True
+    # потом проверим есть ли в проекте админы помимо него
+    check_admin_query = await session.execute(
+        select(ProjectUser.user_id).
+        where(ProjectUser.project_id == project_id).
+        where(ProjectUser.user_id != user.id).
+        where(ProjectUser.is_owner == True)
+    )
+    admin_id = check_admin_query.scalar()
+    # если он админ и других админов в проекте нет, мы начинаем заниматься передачей прав админа
+    if check_root and not admin_id:
+        exist_users_query = await session.execute(
             select(ProjectUser.user_id).
             where(ProjectUser.project_id == project_id).
-            where(ProjectUser.is_owner == False)
+            where(ProjectUser.user_id != user.id)
         )
-        new_admin_id = new_admin_query.scalar_one_or_none()
-        if new_admin_id:
+        exist_users = exist_users_query.scalars().all()
+        # если там пользователи еще есть, то отдаем права первому в списке
+        if exist_users:
+            new_admin_id = exist_users[0]
             await session.execute(
                 update(ProjectUser).
                 where(ProjectUser.project_id == project_id).
                 where(ProjectUser.user_id == new_admin_id).
                 values(is_owner=True)    
             )
-            await session.commit()
-            # доделать удаление проекта если админа передать некому
-    await session.execute(
-        delete(ProjectUser).
-        where(ProjectUser.project_id == project_id).
-        where(ProjectUser.user_id == user.id)
-    )
-    await session.execute(
-        update(Task).
-        where(Task.executor_id == user.id).
-        values(executor_id=None)    
-    )
-    await session.execute(
-        update(Task).
-        where(Task.owner_id == user.id).
-        values(owner_id=None)    
-    )
-    await session.commit()
+            # если остался всего один пользователь, то вешаем на него все задачи проекта
+            if len(exist_users) == 1:
+                await session.execute(
+                    update(Task).
+                    where(Task.project_id == project_id).
+                    values(executor_id=new_admin_id)
+                )
+        # ну а если больше пользователей не осталось, то мы удаляем проект
+        else:
+            await session.execute(
+                delete(Project).
+                where(Project.id == project_id)
+            )
+            trigger = False
+        await session.commit()
+    # если проект еще не удалился, то мы удаляем связь пользователя и проекта
+    # а также вешаем все задачи ушедшего пользователя на первого админа в списке
+    if trigger:
+        await session.execute(
+            delete(ProjectUser).
+            where(ProjectUser.project_id == project_id).
+            where(ProjectUser.user_id == user.id)
+        )
+        await session.execute(
+            update(Task).
+            where(Task.executor_id == user.id).
+            values(executor_id=None)    
+        )
+        await session.execute(
+            update(Task).
+            where(Task.owner_id == user.id).
+            values(owner_id=None)    
+        )
+        await session.commit()

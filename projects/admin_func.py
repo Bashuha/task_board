@@ -84,7 +84,7 @@ async def remove_user_from_project(
         await session.execute(
             update(Task).
             where(Task.executor_id == user_id).
-            values(executor_id=None)    
+            values(executor_id=user.id)    
         )
         await session.execute(
             update(Task).

@@ -1,5 +1,5 @@
 from database.schemas import Project, Sections, Task, Comments, UserInfo, ProjectUser
-from sqlalchemy import insert, update, select, delete, func
+from sqlalchemy import insert, update, select, delete, func, or_, and_
 from sqlalchemy.orm import joinedload, load_only, noload
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
@@ -115,7 +115,7 @@ async def get_today_tasks(session: AsyncSession, user: UserInfo):
             Task.to_do_date <= today_date
         ).
         where(
-            Task.owner == user.login
+            or_(Task.executor_id == user.id, and_(Task.executor_id == None, Task.owner_id == user.id))
         ).
         where(
             Task.status == True
@@ -353,10 +353,10 @@ async def exit_project(project_id: int, session: AsyncSession, user: UserInfo):
         where(ProjectUser.user_id == user.id)
     )
     await session.execute(
-            update(Task).
-            where(Task.executor_id == user.id).
-            values(executor_id=None)    
-        )
+        update(Task).
+        where(Task.executor_id == user.id).
+        values(executor_id=None)    
+    )
     await session.execute(
         update(Task).
         where(Task.owner_id == user.id).

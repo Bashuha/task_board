@@ -61,7 +61,8 @@ async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):
             joinedload(Task.sections).load_only(Sections.name),
             joinedload(Task.project).load_only(Project.name),
             joinedload(Task.executor_info),
-            joinedload(Task.owner_info)
+            joinedload(Task.owner_info),
+            joinedload(Task.task_giver_info)
         ).
         where(Task.id == task_id)
     )
@@ -100,9 +101,12 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
     if not project_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='задача не найдена')
     await check_user_project(project_id, user.id, session)
+
+    task_data = task.model_dump(exclude={'id'}, exclude_unset=True)
     if task.executor_id:
         await check_user_project(project_id, task.executor_id, session)
-    task_data = task.model_dump(exclude={'id'}, exclude_unset=True)
+        task_data['task_giver_id'] = user.id
+
     # если нам передают id раздела, то id проекта мы присваиваем сами
     if task_data.get('section_id'):
         # обращаемся к указанному разделу и берем оттуда id проекта и пеезаписываем project_id

@@ -28,7 +28,7 @@ responses_dict = {404: {"model": ErrorNotFound,
     status_code=status.HTTP_200_OK,
     response_model=Task,
     responses={404: responses_dict[404]},
-    summary='Получение детализации задачи, в которой ты владелец'    
+    summary='Получение детализации задачи, к которой у тебя есть доступ (ты есть в том проекте)'    
 )
 async def get_task_details(
     task_id: int,

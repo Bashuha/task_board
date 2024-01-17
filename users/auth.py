@@ -1,5 +1,5 @@
 from database.my_engine import get_db
-from fastapi import APIRouter, Depends, Request, Response, status, HTTPException
+from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import model
 import users.functions as auth_func
@@ -24,7 +24,8 @@ async def register_user(
 
 @router.post(
     "/login",
-    status_code=status.HTTP_200_OK
+    status_code=status.HTTP_200_OK,
+    response_model=model.UserInfo
 )
 async def login_user(
     response: Response,

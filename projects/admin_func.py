@@ -74,24 +74,36 @@ async def remove_user_from_project(
     user: UserInfo,    
     session: AsyncSession,
 ):
+    # сначала проверим, является ли пользователь админом, чтобы выполнять такие действия
     check_root = await check_link_owner(project_id, user.id, session)
+    if user_id == user.id:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="неприемлемое действие")
     if check_root:
+        # удаляем связку проект-пользователь
         await session.execute(
             delete(ProjectUser).
             where(ProjectUser.project_id == project_id).
             where(ProjectUser.user_id == user_id)
         )
+        # проверим есть ли еще пользователи в проекте помимо админа
+        exist_users_query = await session.execute(
+            select(ProjectUser.user_id).
+            where(ProjectUser.project_id == project_id).
+            where(ProjectUser.user_id != user.id)
+        )
+        exist_users = exist_users_query.scalars().all()
+        # если нет, то вешаем все задачи на админа (единственного пользователя)
+        if not exist_users:
+            new_executor = user.id
+        else:
+            new_executor = None
+            
         await session.execute(
             update(Task).
             where(Task.executor_id == user_id).
-            values(executor_id=user.id)    
+            where(Task.project_id == project_id).
+            values(executor_id=new_executor)    
         )
-        await session.execute(
-            update(Task).
-            where(Task.owner_id == user_id).
-            values(owner_id=None)    
-        )
-
         await session.commit()
 
 
@@ -130,6 +142,8 @@ async def change_admin(
     session: AsyncSession,
 ):
     check_root = await check_link_owner(project_id, user.id, session)
+    if user_id == user.id:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="неприемлемое действие")
     if check_root:
         await session.execute(
             update(ProjectUser).

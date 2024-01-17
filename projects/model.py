@@ -35,6 +35,7 @@ class TaskForDetails(_Base):
     to_do_date: date | None
     owner_info: UserInfo | None
     executor_info: UserInfo | None
+    task_giver_info: UserInfo | None
 
     @model_validator(mode='after')
     def change_field(self):
@@ -111,8 +112,14 @@ class ProjectForList(_Base):
     is_archive: bool
     is_incoming: bool
     value: int = Field(validation_alias='id')
+    users_count: Any = Field(validation_alias='user_link')
     task_count: int = 0
     sections: List[SmallSection] = Field(validation_alias='sections')
+
+    @model_validator(mode='after')
+    def change_field(self):
+        self.users_count: int = len(self.users_count)
+        return self
 
 
 class ProjectList(_Base):

@@ -40,6 +40,7 @@ class Task(_Base):
     name: str
     owner_info: UserInfo | None
     executor_info: UserInfo | None
+    task_giver_info: UserInfo | None
 
     @model_validator(mode='after')
     def change_field(self):

@@ -128,11 +128,17 @@ class ProjectList(_Base):
 
 
 class ProjectUserInfo(_Base):
-    user_id: int
+    value: int = Field(validation_alias="user_id")
     is_owner: bool
+    label: Any = None
     first_name: str
     second_name: str
     login: str
+
+    @model_validator(mode='after')
+    def change_field(self):
+        self.label: str = f"{self.first_name} {self.second_name} ({self.login})"
+        return self
 
 
 class ProjectUserList(_Base):

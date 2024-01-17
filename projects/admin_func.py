@@ -132,6 +132,7 @@ async def project_user_list(project_id: int, user: UserInfo, session: AsyncSessi
         )
         users_list.users_list.append(user_model)
     return users_list
+    # return users
     
 
 async def change_admin(

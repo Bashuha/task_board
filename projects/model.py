@@ -48,6 +48,7 @@ class ProjectDetails(_Base):
     name: str
     is_favorites: bool
     me_admin: bool
+    users_count: int
     sections: List[SectionForDetails]
     open_tasks: List[TaskForDetails]
     close_tasks: List[TaskForDetails]

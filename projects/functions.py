@@ -181,6 +181,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                     load_only(
                         Comments.id
                     ),
+                joinedload(Project.user_link).load_only(ProjectUser.user_id),
                 joinedload(Project.tasks).
                     joinedload(Task.executor_info),
                 joinedload(Project.tasks).
@@ -197,31 +198,28 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
         if not project_info:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="проект не найден")
         
-        project: Project = project_info[0]
-        is_favorites = project_info[1]
-    
         active_list = list()
         close_list = list()
-        for task in project.tasks:
-            # model_task = create_task(task)
+        for task in project_info.Project.tasks:
             if task.status:
                 active_list.append(task)
             else:
                 close_list.append(task)
         sorted_active_tasks: list[my_model.TaskForDetails] = sorted(active_list, key=lambda task_model: task_model.order_number)
         sorted_close_tasks: list[my_model.TaskForDetails] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
-        sorted_sections = sorted(project.sections, key=lambda section_model: section_model.order_number)
+        sorted_sections = sorted(project_info.Project.sections, key=lambda section_model: section_model.order_number)
         
-        me_admin = await check_link_owner(project.id, user.id, session)
+        me_admin = await check_link_owner(project_info.Project.id, user.id, session)
 
         project_object = my_model.ProjectDetails(
-            id=project.id,
-            name=project.name,
-            is_favorites=is_favorites,
+            id=project_info.Project.id,
+            name=project_info.Project.name,
+            is_favorites=project_info.is_favorites,
             sections=sorted_sections,
             open_tasks=sorted_active_tasks,
             close_tasks=sorted_close_tasks,
             me_admin=True if me_admin else False,
+            users_count=len(project_info.Project.user_link)
         )
     else:
         project_query = await session.execute(
@@ -261,16 +259,16 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                     joinedload(Task.owner_info),
                 joinedload(Project.tasks).
                     joinedload(Task.task_giver_info),
+                joinedload(Project.user_link).load_only(ProjectUser.user_id),
             ).
             join(ProjectUser, isouter=True).
             where(Project.is_incoming == True).
             where(ProjectUser.user_id == user.id)
         )
-        project = project_query.unique().scalar_one_or_none()
+        project_info = project_query.unique().scalar_one_or_none()
         active_list = list()
         close_list = list()
-        for task in project.tasks:
-            # model_task = create_task(task)
+        for task in project_info.tasks:
             if task.status:
                 active_list.append(task)
             else:
@@ -278,16 +276,17 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
 
         sorted_active_tasks: list[my_model.TaskForDetails] = sorted(active_list, key=lambda task_model: task_model.order_number)
         sorted_close_tasks: list[my_model.TaskForDetails] = sorted(close_list, key=lambda task_model: task_model.create_date, reverse=True)
-        sorted_sections = sorted(project.sections, key=lambda section_model: section_model.order_number)
+        sorted_sections = sorted(project_info.sections, key=lambda section_model: section_model.order_number)
 
         project_object = my_model.ProjectDetails(
-            id=project.id,
-            name=project.name,
+            id=project_info.id,
+            name=project_info.name,
             is_favorites=False,
             sections=sorted_sections,
             open_tasks=sorted_active_tasks,
             close_tasks=sorted_close_tasks,
             me_admin=True,
+            users_count=len(project_info.user_link),
         )
 
     return project_object

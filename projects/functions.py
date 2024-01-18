@@ -36,6 +36,7 @@ async def get_projects(user: UserInfo, session: AsyncSession):
                 Sections.id,
                 Sections.name,
                 Sections.project_id,
+                Sections.is_basic,
             ).noload(Sections.tasks),
             joinedload(Project.user_link).load_only(ProjectUser.user_id)
         ).join(

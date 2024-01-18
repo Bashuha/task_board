@@ -109,13 +109,13 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
 
     # если нам передают id раздела, то id проекта мы присваиваем сами
     if task_data.get('section_id'):
-        # обращаемся к указанному разделу и берем оттуда id проекта и пеезаписываем project_id
+        # обращаемся к указанному разделу и берем оттуда project_id
         project_id_query = await session.execute(select(Sections.project_id).where(Sections.id == task_data['section_id']))
-        project_id = project_id_query.unique().scalar_one_or_none()
+        new_project_id = project_id_query.unique().scalar_one_or_none()
 
-        if not project_id:
+        if not new_project_id:
             raise HTTPException(detail="раздел не найден", status_code=status.HTTP_404_NOT_FOUND)
-        await check_user_project(project_id, user.id, session)
+        await check_user_project(new_project_id, user.id, session)
         
         task_query = await session.execute(
             select(Sections.id, func.count(Task.id).label('task_count')).
@@ -125,8 +125,14 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
         )
         task_number = task_query.one()
         task_data['order_number'] = task_number.task_count + 1
-        task_data["project_id"] = project_id
+        # если задача перемещается в другой проект, то у нее затираются исполнитель и назначивший задачу
+        if project_id != new_project_id:
+            task_data['task_giver_id'] = None
+            task_data['executor_id'] = None
+            task_data["project_id"] = new_project_id
     # далее просто обновляем все данные в объекте Task и комитим
+    if not task_data:
+        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="некорректные данные")
     await session.execute(
         update(Task).
         where(Task.id == task.id).
@@ -161,14 +167,19 @@ async def change_task_status(
     await session.commit()
 
 
-async def delete_task(task_id: int, session: AsyncSession, user: UserInfo):
-    task_query = await session.execute(select(Task.id).where(Task.id == task_id))
-    task = task_query.scalar_one_or_none()
-    if not task:
-        raise HTTPException(detail='Задача не найдена', status_code=status.HTTP_404_NOT_FOUND)
-    
-    delete_query = delete(Task).where(Task.id == task_id).where(Task.owner == user.login)
-    await session.execute(delete_query)
+async def delete_task(task: my_model.DeleteTask, session: AsyncSession, user: UserInfo):
+    task_query = await session.execute(select(Task.id).where(Task.id == task.task_id))
+    task_result = task_query.scalar_one_or_none()
+    if not task_result:
+        raise HTTPException(detail='задача не найдена', status_code=status.HTTP_404_NOT_FOUND)
+    await check_user_project(task.project_id, user.id, session)
+    await session.execute(
+        delete(Task).
+        where(
+            Task.id == task.task_id,
+            Task.project_id == task.project_id
+        )
+    )
     await session.commit()
 
 

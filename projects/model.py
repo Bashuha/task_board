@@ -104,6 +104,7 @@ class ChangeArchiveStatus(_Base):
 class SmallSection(_Base):
     value: int = Field(validation_alias='id')
     label: str = Field(validation_alias='name')
+    is_basic: bool
     project_id: int
 
 

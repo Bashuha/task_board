@@ -96,6 +96,11 @@ class ChangeTaskStatus(_Base):
     status: bool
 
 
+class DeleteTask(_Base):
+    task_id: int
+    project_id: int
+
+
 class ErrorNotFound(_Base):
     message: str = "тут будет сообщение об ошибке"
 

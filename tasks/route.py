@@ -2,7 +2,7 @@ from database.my_engine import get_db
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import tasks.functions as task_func
-from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, TaskOrder, TaskList, ChangeTaskStatus
+from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, DeleteTask, TaskList, ChangeTaskStatus, TaskOrder
 from users.functions import get_current_user
 from database.schemas import UserInfo
 
@@ -103,11 +103,11 @@ async def change_task_status(
     summary='Удаление своей задачи'    
 )
 async def delete_task(
-    task_id: int,
+    task: DeleteTask,
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await task_func.delete_task(task_id, session, user)
+    return await task_func.delete_task(task, session, user)
 
 
 @router.put(

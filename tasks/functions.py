@@ -96,26 +96,28 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
 
 
 async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
+    """
+    Функция изменения задачи
+    """
+    # берем project_id и проверяем наличие пользовтеля в проекте
     task_query = await session.execute(select(Task.project_id).where(Task.id == task.id))
     project_id = task_query.scalar_one_or_none()
     if not project_id:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='задача не найдена')
     await check_user_project(project_id, user.id, session)
-
     task_data = task.model_dump(exclude={'id'}, exclude_unset=True)
-    if task.executor_id:
-        await check_user_project(project_id, task.executor_id, session)
-        task_data['task_giver_id'] = user.id
 
     # если нам передают id раздела, то id проекта мы присваиваем сами
     if task_data.get('section_id'):
         # обращаемся к указанному разделу и берем оттуда project_id
         project_id_query = await session.execute(select(Sections.project_id).where(Sections.id == task_data['section_id']))
         new_project_id = project_id_query.unique().scalar_one_or_none()
-
         if not new_project_id:
             raise HTTPException(detail="раздел не найден", status_code=status.HTTP_404_NOT_FOUND)
-        await check_user_project(new_project_id, user.id, session)
+        # если меняется проект, то проверять наличие пользователя в новом проекте
+        if project_id != new_project_id:
+            await check_user_project(new_project_id, user.id, session)
+            task_data['project_id'] = new_project_id
         
         task_query = await session.execute(
             select(Sections.id, func.count(Task.id).label('task_count')).
@@ -125,11 +127,12 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
         )
         task_number = task_query.one()
         task_data['order_number'] = task_number.task_count + 1
-        # если задача перемещается в другой проект, то у нее затираются исполнитель и назначивший задачу
-        if project_id != new_project_id:
-            task_data['task_giver_id'] = None
-            task_data['executor_id'] = None
-            task_data["project_id"] = new_project_id
+        project_id = new_project_id
+    # при назначении исполнителя проверяем его наличие в проекте
+    if task.executor_id:
+        await check_user_project(project_id, task.executor_id, session)
+        task_data['task_giver_id'] = user.id
+
     # далее просто обновляем все данные в объекте Task и комитим
     if not task_data:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="некорректные данные")
@@ -156,7 +159,11 @@ async def change_task_status(
             where(Sections.id == change_status.section_id)
         )
         task_number = task_query.one()
-        change_dict['order_number'] = task_number.task_count + 1
+        if task_number.task_count is None:
+            change_dict['order_number'] = 1
+        else:
+            change_dict['order_number'] = task_number.task_count + 1
+
     await session.execute(
         update(Task).
         where(Task.id == change_status.id).

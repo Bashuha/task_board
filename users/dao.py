@@ -20,9 +20,9 @@ class UsersDAO(BaseDAO):
             select(
                 cls.schema.login,
                 cls.schema.password,
-                UserInfo.id
+                cls.info_chema.id,
             ).
-            join(UserInfo).
+            join(cls.info_chema).
             where(cls.schema.login == arg))
         result = query.one_or_none()
         return result

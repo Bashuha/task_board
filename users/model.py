@@ -24,3 +24,8 @@ class UserInfo(_Base):
     login: str
     first_name: str
     second_name: str
+
+
+class GetUser(_Base):
+    id: int
+    login: str

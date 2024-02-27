@@ -50,5 +50,5 @@ async def logout_user(
     "/check_user",
     status_code=status.HTTP_200_OK
 )
-async def check_user(request: Request, session: AsyncSession = Depends(get_db)):
-    return await auth_func.check_user(request, session)
+async def check_user(request: Request):
+    return await auth_func.check_user(request)

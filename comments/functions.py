@@ -17,6 +17,7 @@ async def check_user(comment_id: int, session: AsyncSession, user: UserInfo):
     
 
 async def create_comment(comment: CreateComment, session: AsyncSession, user: UserInfo):
+    # доработать чтобы оставлять коменты только в проектах где ты есть
     task_qr = session.get(Task, comment.task_id)
     task: Task = await task_qr
     if not task:

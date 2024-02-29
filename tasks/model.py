@@ -110,7 +110,8 @@ class TaskForOrder(_Base):
 
 
 class TaskOrder(_Base):
-    tasks: List[TaskForOrder]
+    # tasks: List[TaskForOrder]
+    task_over: int
     section_id: int
-    task_id: int
+    task_active: int
     project_id: int

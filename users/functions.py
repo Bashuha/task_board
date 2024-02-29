@@ -116,13 +116,11 @@ def get_token(request: Request, response: Response):
             login=payload.get("login"),
             response=response
         )
-        # raise HTTPException(headers={"access_token"})
 
     return access_token
 
 
 async def get_current_user(
-    # session: AsyncSession = Depends(get_db),
     token: str = Depends(get_token)
 ):
     try:
@@ -135,34 +133,9 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="не тот токен"
         )
-
-    # user_id: str = payload.get("sub")
-    # if not user_id:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_401_UNAUTHORIZED, detail="ошибка токена"
-    #     )
-    # user = await UsersDAO.find_by_id(arg=int(user_id), session=session)
-    # if not user:
-    #     raise HTTPException(
-    #         status_code=status.HTTP_401_UNAUTHORIZED,
-    #         detail="такого пользователя не существует",
-    #     )
     user = model.GetUser(id=payload.get("sub"), login=payload.get("login"))
     return user
 
 
-async def check_user(request: Request):
-    token = request.cookies.get("refresh_token")
-    if not token:
-        return False
-    try:
-        payload = jwt.decode(token, JWT.get("secret"), JWT.get("algoritm"))
-    except JWTError:
-        return False
-    # user_id: str = payload.get("sub")
-    # if not user_id:
-    #     return False
-    # user = await UsersDAO.find_by_id(arg=int(user_id), session=session)
-    # if not user:
-    #     return False
-    return True
+async def check_user():
+    return

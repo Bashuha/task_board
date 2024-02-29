@@ -194,16 +194,47 @@ async def change_task_order(task_order: my_model.TaskOrder, session: AsyncSessio
     await check_user_project(task_order.project_id, user.id, session)
     new_order_list = list()
     # обновляем section_id у задачи, которую перетаскивают
+    # await session.execute(
+    #     update(Task).
+    #     where(Task.id == task_order.task_id).
+    #     values(section_id = task_order.section_id))
+    # await session.commit()
+    # создаем словарь из нового списка id и генерируем новый порядковый номер
+    # for number, task_id in enumerate(task_order.tasks, start=1):
+    #     order_dict = {"id": task_id.id, "order_number": number}
+    #     # добавляем полученный словарь в список для UPDATE
+    #     new_order_list.append(order_dict)
+
+
+
+    tasks_query = await session.execute(
+        select(Task.id, Task.order_number, Task.section_id).
+        where(Task.section_id == task_order.section_id).
+        order_by(Task.order_number)
+    )
+    tasks = tasks_query.all()
+    tasks = sorted(tasks, key=lambda task: task.order_number)
     await session.execute(
         update(Task).
-        where(Task.id == task_order.task_id).
-        values(section_id = task_order.section_id))
+        where(Task.id == task_order.task_active).
+        values(
+            section_id = task_order.section_id,
+            order_number = len(tasks) + 1
+        )
+    )
     await session.commit()
-    # создаем словарь из нового списка id и генерируем новый порядковый номер
-    for number, task_id in enumerate(task_order.tasks, start=1):
-        order_dict = {"id": task_id.id, "order_number": number}
-        # добавляем полученный словарь в список для UPDATE
-        new_order_list.append(order_dict)
+    trigger = True
+    for task in tasks:
+        if task.id == task_order.task_over and trigger:
+            order_dict = {"id": task_order.task_active, "order_number": task.order_number}
+            new_order_list.append(order_dict)
+            trigger = False    
+        if not trigger:
+            order_dict = {"id": task.id, "order_number": task.order_number}
+
+
+
+    
     # одним запросом обновляем порядок, используя наш список словарей
     await session.execute(
         update(Task).

@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from . import model
 import users.functions as auth_func
-from users.functions import get_token
+from users.functions import get_current_user
 
 
 router = APIRouter(
@@ -50,5 +50,7 @@ async def logout_user(
     "/check_user",
     status_code=status.HTTP_200_OK
 )
-async def check_user(request: Request):
-    return await auth_func.check_user(request)
+async def check_user(
+    user: model.UserInfo = Depends(get_current_user)
+):
+    return await auth_func.check_user()

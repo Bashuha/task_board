@@ -213,26 +213,21 @@ async def change_task_order(task_order: my_model.TaskOrder, session: AsyncSessio
         order_by(Task.order_number)
     )
     tasks = tasks_query.all()
-    tasks = sorted(tasks, key=lambda task: task.order_number)
-    await session.execute(
-        update(Task).
-        where(Task.id == task_order.task_active).
-        values(
-            section_id = task_order.section_id,
-            order_number = len(tasks) + 1
-        )
-    )
-    await session.commit()
-    trigger = True
+
+    active_order_number = None
+    over_order_number = None
     for task in tasks:
-        if task.id == task_order.task_over and trigger:
+        if task.id == task_order.task_over:
             order_dict = {"id": task_order.task_active, "order_number": task.order_number}
+            over_order_number = task.order_number
             new_order_list.append(order_dict)
-            trigger = False    
-        if not trigger:
-            order_dict = {"id": task.id, "order_number": task.order_number}
-
-
+        elif task.id == task_order.task_active:
+            active_order_number = task.order_number
+    
+    if active_order_number > over_order_number:
+        pass
+    elif active_order_number < over_order_number:
+        pass
 
     
     # одним запросом обновляем порядок, используя наш список словарей

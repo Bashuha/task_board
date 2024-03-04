@@ -11,6 +11,7 @@ from tasks.route import router as task_router
 from sections.route import router as section_router
 from comments.route import router as comment_router
 from users.auth import router as user_router
+from tags.route import router as tag_router
 
 
 app = FastAPI(
@@ -22,6 +23,7 @@ app.include_router(project_router)
 app.include_router(task_router)
 app.include_router(section_router)
 app.include_router(comment_router)
+app.include_router(tag_router)
 
 
 @app.exception_handler(HTTPException)

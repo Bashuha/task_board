@@ -125,3 +125,21 @@ class ProjectUser(Base):
 
     project_info: Mapped[Project] = relationship()
     user_info: Mapped[UserInfo] = relationship()
+
+
+class Tag(Base):
+    __tablename__ = "tag"
+
+    id = Column(INTEGER(), primary_key=True)
+    name = Column(VARCHAR(255), nullable=False)
+    project_id = Column(ForeignKey(Project.id), primary_key=True, nullable=False)
+    color = Column(VARCHAR(7), nullable=True)
+
+    project: Mapped[Project] = relationship()
+
+
+class ProjectTag(Base):
+    __tablename__= "project_tag"
+
+    project_id = Column(ForeignKey(Project.id), primary_key=True, nullable=False)
+    tag_id = Column(ForeignKey(Tag.id), primary_key=True, nullable=False)

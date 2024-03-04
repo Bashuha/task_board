@@ -71,6 +71,9 @@ async def get_projects(user: UserInfo, session: AsyncSession):
 
 
 async def check_user_project(project_id: int, user_id: int, session: AsyncSession):
+    """
+    Функция проверяет, может ли пользователь взаимодействовать с проектом
+    """
     check_user_query = await session.execute(
         select(ProjectUser.project_id).
         where(ProjectUser.project_id == project_id).

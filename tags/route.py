@@ -35,3 +35,44 @@ async def get_tag_list(
     user: UserInfo = Depends(get_current_user),
 ):
     return await tag_func.create_tag(session, tag_model, user)
+
+
+@router.patch(
+    '/edit_tag',
+    status_code=status.HTTP_200_OK,
+    summary='Редактирование тега'
+)
+async def edit_tag(
+    tag_model: tag_model.EditTag,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await tag_func.edit_tag(session, tag_model, user)
+
+
+@router.delete(
+    "/delete_tag",
+    status_code=status.HTTP_200_OK,
+    summary="Удаление тега"
+)
+async def delete_tag(
+    tag_model: tag_model.DeleteTag,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await tag_func.delete_tag(session, tag_model, user)
+
+
+@router.post(
+    '/add_tag',
+    status_code=status.HTTP_200_OK,
+    summary="Добавление тега к задаче"
+)
+async def add_tag_to_task(
+    tag_model: tag_model.ManageTag,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await tag_func.add_tag_to_task(session, tag_model, user)
+
+

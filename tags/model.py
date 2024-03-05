@@ -16,6 +16,7 @@ class _Base(BaseModel):
 class CreateTag(_Base):
     name: str
     project_id: int
+    task_id: int
     color: str | None = None
 
 
@@ -28,3 +29,21 @@ class TagInfo(_Base):
 
 class TagList(_Base):
     tags: List[TagInfo]
+
+
+class EditTag(_Base):
+    id: int
+    project_id: int
+    name: str = None
+    color: str | None = None
+
+
+class DeleteTag(_Base):
+    id: int
+    project_id: int
+
+
+class ManageTag(_Base):
+    tag_id: int
+    task_id: int
+    project_id: int

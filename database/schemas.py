@@ -130,16 +130,18 @@ class ProjectUser(Base):
 class Tag(Base):
     __tablename__ = "tag"
 
-    id = Column(INTEGER(), primary_key=True)
+    id = Column(INTEGER(), primary_key=True, autoincrement=True)
     name = Column(VARCHAR(255), nullable=False)
-    project_id = Column(ForeignKey(Project.id), primary_key=True, nullable=False)
+    project_id = Column(ForeignKey(Project.id), nullable=False)
+    task_id = Column(ForeignKey(Task.id), nullable=False)
     color = Column(VARCHAR(7), nullable=True)
 
     project: Mapped[Project] = relationship()
+    task: Mapped[Task] = relationship()
 
 
-class ProjectTag(Base):
-    __tablename__= "project_tag"
+class TaskTag(Base):
+    __tablename__= "task_tag"
 
-    project_id = Column(ForeignKey(Project.id), primary_key=True, nullable=False)
+    task_id = Column(ForeignKey(Task.id), primary_key=True, nullable=False)
     tag_id = Column(ForeignKey(Tag.id), primary_key=True, nullable=False)

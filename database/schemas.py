@@ -1,5 +1,5 @@
 from __future__ import annotations
-from sqlalchemy import Column, ForeignKey, inspect, func
+from sqlalchemy import Column, ForeignKey, Table, inspect, func
 from sqlalchemy.dialects.mysql import (
     INTEGER,
     VARCHAR,
@@ -101,6 +101,7 @@ class Task(Base):
     executor_info: Mapped[UserInfo] = relationship(foreign_keys=[executor_id])
     owner_info: Mapped[UserInfo] = relationship(foreign_keys=[owner_id])
     task_giver_info: Mapped[UserInfo] = relationship(foreign_keys=[task_giver_id])
+    tag_info: Mapped[list[TaskTag]] = relationship()
 
 
 class Comments(Base):
@@ -133,11 +134,9 @@ class Tag(Base):
     id = Column(INTEGER(), primary_key=True, autoincrement=True)
     name = Column(VARCHAR(255), nullable=False)
     project_id = Column(ForeignKey(Project.id), nullable=False)
-    task_id = Column(ForeignKey(Task.id), nullable=False)
     color = Column(VARCHAR(7), nullable=True)
 
     project: Mapped[Project] = relationship()
-    task: Mapped[Task] = relationship()
 
 
 class TaskTag(Base):
@@ -145,3 +144,6 @@ class TaskTag(Base):
 
     task_id = Column(ForeignKey(Task.id), primary_key=True, nullable=False)
     tag_id = Column(ForeignKey(Tag.id), primary_key=True, nullable=False)
+
+    task_info: Mapped[Task] = relationship()
+    tag_info: Mapped[Tag] = relationship()

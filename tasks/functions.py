@@ -1,4 +1,4 @@
-from database.schemas import Project, Sections, Task, UserInfo, Comments, ProjectUser
+from database.schemas import Project, Sections, Task, UserInfo, Comments, ProjectUser, Tag
 from sqlalchemy import insert, update, delete, select, func, or_
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -62,15 +62,26 @@ async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):
             joinedload(Task.project).load_only(Project.name),
             joinedload(Task.executor_info),
             joinedload(Task.owner_info),
-            joinedload(Task.task_giver_info)
+            joinedload(Task.task_giver_info),
+            joinedload(Task.tag_info)
         ).
         where(Task.id == task_id)
     )
+
     task = task_query.unique().scalar_one_or_none()
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='задача не найдена')
     await check_user_project(task.project_id, user.id, session)
-    return task
+    tag_ids = [tag.tag_id for tag in task.tag_info]
+    tag_query = await session.execute(
+        select(Tag.id, Tag.name, Tag.color).
+        where(Tag.id.in_(tag_ids))
+    )
+    tag_info = tag_query.all()
+    task_object = my_model.Task.model_validate(task)
+    task_object.tags = tag_info
+
+    return task_object
 
 
 async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):

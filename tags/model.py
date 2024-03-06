@@ -16,7 +16,6 @@ class _Base(BaseModel):
 class CreateTag(_Base):
     name: str
     project_id: int
-    task_id: int
     color: str | None = None
 
 

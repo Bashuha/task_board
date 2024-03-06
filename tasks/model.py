@@ -26,6 +26,12 @@ class Comment(_Base):
     text: str
 
 
+class TagInfo(_Base):
+    id: int
+    name: str
+    color: str
+
+
 class Task(_Base):
     comments: List[Comment]
     create_date: datetime
@@ -41,6 +47,7 @@ class Task(_Base):
     owner_info: UserInfo | None
     executor_info: UserInfo | None
     task_giver_info: UserInfo | None
+    tags: List[TagInfo] = None
 
     @model_validator(mode='after')
     def change_field(self):

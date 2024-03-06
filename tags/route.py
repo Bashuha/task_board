@@ -76,3 +76,14 @@ async def add_tag_to_task(
     return await tag_func.add_tag_to_task(session, tag_model, user)
 
 
+@router.delete(
+    '/remove_tag_task',
+    status_code=status.HTTP_200_OK,
+    summary="Удаление тега из задачи"
+)
+async def remove_tag_from_task(
+    tag_model: tag_model.ManageTag,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await tag_func.remove_tag_from_task(session, tag_model, user)

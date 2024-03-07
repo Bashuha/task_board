@@ -72,16 +72,8 @@ async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):
     if not task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='задача не найдена')
     await check_user_project(task.project_id, user.id, session)
-    tag_ids = [tag.tag_id for tag in task.tag_info]
-    tag_query = await session.execute(
-        select(Tag.id, Tag.name, Tag.color).
-        where(Tag.id.in_(tag_ids))
-    )
-    tag_info = tag_query.all()
-    task_object = my_model.Task.model_validate(task)
-    task_object.tags = tag_info
 
-    return task_object
+    return task
 
 
 async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):

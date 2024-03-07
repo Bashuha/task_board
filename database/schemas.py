@@ -9,27 +9,38 @@ from sqlalchemy.dialects.mysql import (
     DATE
 )
 import datetime
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import relationship, DeclarativeBase, Mapped
 from sqlalchemy.ext.declarative import as_declarative
-from sqlalchemy.orm import Mapped
 
 
-@as_declarative()
-class Base:
-    def _asdict(self):
-        result = dict()
-        for c in inspect(self).mapper.column_attrs:
-            value = getattr(self, c.key)
-            if isinstance(value, datetime.datetime):
-                value = value.strftime('%d.%m.%Y %H:%M')
-            elif isinstance(value, datetime.date):
-                value = value.strftime('%d.%m.%Y')
-            elif isinstance(value, datetime.time):
-                value = value.strftime('%H:%M')
-            result[c.key] = value
+# @as_declarative()
+# class Base:
+#     def _asdict(self):
+#         result = dict()
+#         for c in inspect(self).mapper.column_attrs:
+#             value = getattr(self, c.key)
+#             if isinstance(value, datetime.datetime):
+#                 value = value.strftime('%d.%m.%Y %H:%M')
+#             elif isinstance(value, datetime.date):
+#                 value = value.strftime('%d.%m.%Y')
+#             elif isinstance(value, datetime.time):
+#                 value = value.strftime('%H:%M')
+#             result[c.key] = value
         
-        return result
+#         return result
     
+
+class Base(DeclarativeBase):
+    pass
+
+
+tag_task_link = Table(
+    'task_tag',
+    Base.metadata,
+    Column('tag_id', ForeignKey('tag.id'), primary_key=True),
+    Column('task_id', ForeignKey('Task.id'), primary_key=True)
+)
+
 
 class User(Base):
     __tablename__ = "user"
@@ -101,7 +112,10 @@ class Task(Base):
     executor_info: Mapped[UserInfo] = relationship(foreign_keys=[executor_id])
     owner_info: Mapped[UserInfo] = relationship(foreign_keys=[owner_id])
     task_giver_info: Mapped[UserInfo] = relationship(foreign_keys=[task_giver_id])
-    tag_info: Mapped[list[TaskTag]] = relationship()
+    tag_info: Mapped[list[Tag]] = relationship(
+        secondary=tag_task_link,
+        back_populates='task_info'
+    )
 
 
 class Comments(Base):
@@ -137,13 +151,18 @@ class Tag(Base):
     color = Column(VARCHAR(7), nullable=True)
 
     project: Mapped[Project] = relationship()
+    task_info: Mapped[Task] = relationship(
+        secondary=tag_task_link,
+        back_populates='tag_info'
+    )
 
 
-class TaskTag(Base):
-    __tablename__= "task_tag"
+# class TagTask(Base):
+#     __tablename__= "task_tag"
+#     __abstract__ = True
 
-    task_id = Column(ForeignKey(Task.id), primary_key=True, nullable=False)
-    tag_id = Column(ForeignKey(Tag.id), primary_key=True, nullable=False)
+#     task_id = Column(ForeignKey(Task.id), primary_key=True, nullable=False)
+#     tag_id = Column(ForeignKey(Tag.id), primary_key=True, nullable=False)
 
-    task_info: Mapped[Task] = relationship()
-    tag_info: Mapped[Tag] = relationship()
+#     task_info: Mapped[Task] = relationship()
+#     tag_info: Mapped[Tag] = relationship()

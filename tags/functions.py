@@ -2,7 +2,7 @@ from sqlalchemy import insert, update, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 import tags.model as tag_model
 from fastapi import HTTPException, status
-from database.schemas import Task, TaskTag, UserInfo, Tag
+from database.schemas import Task, UserInfo, Tag, tag_task_link
 from projects.functions import check_user_project
 
 
@@ -59,7 +59,10 @@ async def delete_tag(
 
     await session.execute(
         delete(Tag).
-        where(Tag.id == tag_model.id, Tag.project_id == tag_model.project_id)
+        where(
+            Tag.id == tag_model.id,
+            Tag.project_id == tag_model.project_id
+        )
     )
     await session.commit()
 
@@ -73,13 +76,21 @@ async def add_tag_to_task(
 
     check_task_query = await session.execute(
         select(Task.id).
-        where(Task.project_id == tag_model.project_id, Task.id == tag_model.task_id)
+        where(
+            Task.project_id == tag_model.project_id,
+            Task.id == tag_model.task_id
+        )
     )
     check_task = check_task_query.scalar_one_or_none()
     if not check_task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='такой задачи в проекте нет')
     
-    await session.execute(insert(TaskTag).values(tag_id=tag_model.tag_id, task_id=tag_model.task_id))
+    await session.execute(
+        tag_task_link.insert().values(
+            tag_id=tag_model.tag_id,
+            task_id=tag_model.task_id
+        )
+    )
     await session.commit()
 
 
@@ -99,7 +110,9 @@ async def remove_tag_from_task(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='такой задачи в проекте нет')
 
     await session.execute(
-        delete(TaskTag).
-        where(TaskTag.tag_id == tag_model.tag_id, TaskTag.task_id == tag_model.task_id)
+        tag_task_link.delete().where(
+            tag_task_link.c.tag_id == tag_model.tag_id,
+            tag_task_link.c.task_id == tag_model.task_id
+        )
     )
     await session.commit()

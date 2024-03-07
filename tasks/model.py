@@ -47,7 +47,7 @@ class Task(_Base):
     owner_info: UserInfo | None
     executor_info: UserInfo | None
     task_giver_info: UserInfo | None
-    tags: List[TagInfo] = None
+    tags: List[TagInfo] = Field(validation_alias='tag_info')
 
     @model_validator(mode='after')
     def change_field(self):

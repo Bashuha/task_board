@@ -191,7 +191,9 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                 joinedload(Project.tasks).
                     joinedload(Task.owner_info),
                 joinedload(Project.tasks).
-                    joinedload(Task.task_giver_info)
+                    joinedload(Task.task_giver_info),
+                joinedload(Project.tasks).
+                    joinedload(Task.tag_info),
             ).
             join(ProjectUser, isouter=True).
             where(Project.id == project_id).

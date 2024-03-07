@@ -23,6 +23,12 @@ class SectionForDetails(_Base):
     is_basic: bool
 
 
+class TagInfo(_Base):
+    id: int
+    name: str
+    color: str
+
+
 class TaskForDetails(_Base):
     id: int
     name: str
@@ -36,6 +42,7 @@ class TaskForDetails(_Base):
     owner_info: UserInfo | None
     executor_info: UserInfo | None
     task_giver_info: UserInfo | None
+    tags: List[TagInfo] = Field(validation_alias="tag_info")
 
     @model_validator(mode='after')
     def change_field(self):

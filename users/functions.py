@@ -110,7 +110,12 @@ def get_token(request: Request, response: Response):
     if not refresh_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     if not access_token and refresh_token:
-        payload = jwt.decode(refresh_token, JWT.get("secret"), JWT.get("algoritm"))
+        try:
+            payload = jwt.decode(refresh_token, JWT.get("secret"), JWT.get("algoritm"))
+        except JWTError as e:
+            raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"{e}"
+        )
         access_token = update_token(
             user_id=payload.get("sub"),
             login=payload.get("login"),
@@ -125,9 +130,9 @@ async def get_current_user(
 ):
     try:
         payload = jwt.decode(token, JWT.get("secret"), JWT.get("algoritm"))
-    except JWTError:
+    except JWTError as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="неправильный токен"
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"{e}"
         )
     if payload.get("type") != "access":
         raise HTTPException(

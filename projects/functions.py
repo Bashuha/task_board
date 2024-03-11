@@ -200,7 +200,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
             where(Project.is_incoming == False).
             where(ProjectUser.user_id == user.id)
         )
-        project_info = project_query.unique().one_or_none()
+        project_info: Project = project_query.unique().one_or_none()
         if not project_info:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="проект не найден")
         
@@ -266,6 +266,8 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
                 joinedload(Project.tasks).
                     joinedload(Task.task_giver_info),
                 joinedload(Project.user_link).load_only(ProjectUser.user_id),
+                joinedload(Project.tasks).
+                    joinedload(Task.tag_info),
             ).
             join(ProjectUser, isouter=True).
             where(Project.is_incoming == True).

@@ -35,7 +35,8 @@ async def get_task_list(session: AsyncSession, user: UserInfo):
             joinedload(Task.comments).
                 load_only(
                     Comments.id
-                )
+                ),
+            joinedload(Task.tag_info)
         ).
         where(
             or_(Task.executor_id == user.id, Task.executor_id == None)

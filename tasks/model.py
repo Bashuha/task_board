@@ -66,6 +66,7 @@ class TaskForList(_Base):
     project_name: Any = Field(validation_alias='project')
     section_name: Any = Field(validation_alias='sections')
     to_do_date: date | None
+    tags: List[TagInfo] = Field(validation_alias='tag_info')
 
     @model_validator(mode='after')
     def change_field(self):

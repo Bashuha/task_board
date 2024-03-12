@@ -1,4 +1,4 @@
-from database.schemas import Project, Sections, Task, UserInfo, Comments, ProjectUser, Tag
+from database.schemas import Project, Sections, Task, UserInfo, Comments, ProjectUser
 from sqlalchemy import insert, update, delete, select, func, or_
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -9,6 +9,9 @@ from projects.functions import check_user_project
 
 
 async def get_task_list(session: AsyncSession, user: UserInfo):
+    """
+    Получить все свои задачи
+    """
     project_ids_query = await session.execute(
         select(ProjectUser.project_id).
         where(ProjectUser.user_id == user.id)
@@ -54,7 +57,10 @@ async def get_task_list(session: AsyncSession, user: UserInfo):
     return task_list_object
 
 
-async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):  
+async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):
+    """
+    Получение детализации задачи
+    """
     task_query = await session.execute(
         select(Task).
         options(
@@ -78,6 +84,10 @@ async def get_task_details(task_id: int, session: AsyncSession, user: UserInfo):
 
 
 async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
+    """
+    Создание задачи
+    """
+
     # есть ли пользователь в проекте
     task_query = await session.execute(
         select(Sections.id, Sections.project_id, func.count(Task.order_number).label('task_count')).
@@ -149,18 +159,21 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
 
 
 async def change_task_status(
-    change_status: my_model.ChangeTaskStatus,
+    task_model: my_model.ChangeTaskStatus,
     user: UserInfo,
     session: AsyncSession
 ):
-    await check_user_project(change_status.project_id, user.id, session)
-    change_dict = {'status': change_status.status}
-    if change_status.status:
+    """
+    Изменение статуса задачи (открыть/закрыть задачу)
+    """
+    await check_user_project(task_model.project_id, user.id, session)
+    change_dict = {'status': task_model.status}
+    if task_model.status:
         task_query = await session.execute(
             select(Sections.id, func.MAX(Task.order_number).label('task_count')).
             join(Task, isouter=True).
             where(Task.status == True).
-            where(Sections.id == change_status.section_id)
+            where(Sections.id == task_model.section_id)
         )
         task_number = task_query.one()
         if task_number.task_count is None:
@@ -170,15 +183,18 @@ async def change_task_status(
 
     await session.execute(
         update(Task).
-        where(Task.id == change_status.id).
-        where(Task.project_id == change_status.project_id).
-        where(Task.section_id == change_status.section_id).
+        where(Task.id == task_model.id).
+        where(Task.project_id == task_model.project_id).
+        where(Task.section_id == task_model.section_id).
         values(change_dict)
     )
     await session.commit()
 
 
 async def delete_task(task: my_model.DeleteTask, session: AsyncSession, user: UserInfo):
+    """
+    Удаление задачи из проекта
+    """
     task_query = await session.execute(select(Task.id).where(Task.id == task.task_id))
     task_result = task_query.scalar_one_or_none()
     if not task_result:
@@ -195,6 +211,9 @@ async def delete_task(task: my_model.DeleteTask, session: AsyncSession, user: Us
 
 
 async def change_task_order(task_order: my_model.TaskOrder, session: AsyncSession, user: UserInfo):
+    """
+    Изменение порядка задач внутри раздела
+    """
     await check_user_project(task_order.project_id, user.id, session)
     new_order_list = list()
     # обновляем section_id у задачи, которую перетаскивают

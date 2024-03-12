@@ -1,5 +1,5 @@
 from database.schemas import Project, UserInfo, ProjectUser, Task
-from sqlalchemy import insert, update, select, delete, or_
+from sqlalchemy import insert, update, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import IntegrityError
 from projects.model import ChangeArchiveStatus
@@ -9,6 +9,9 @@ from projects.functions import check_link_owner, check_user_project
 
 
 async def delete_from_archive(project_id: int, session: AsyncSession, user: UserInfo):
+    """
+    Удалить проект из архива
+    """
     project_model = await check_link_owner(project_id, user.id, session)
     if project_model:
         await session.execute(
@@ -21,6 +24,9 @@ async def delete_from_archive(project_id: int, session: AsyncSession, user: User
 
 
 async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSession, user: UserInfo):
+    """
+    Переместить проект в архив или достать из архива
+    """
     project_model = await check_link_owner(project.id, user.id, session)
     if project_model:
         await session.execute(
@@ -43,6 +49,10 @@ async def add_user_to_project(
     session: AsyncSession,
     user: UserInfo
 ):
+    """
+    Добавление пользователя в проект
+    добавить можно только зарегестрированного пользователя (пока что)
+    """
     # берем id пользователя, которого хотим добавить в проект
     user_id_query = await session.execute(
         select(UserInfo.id).
@@ -74,6 +84,10 @@ async def remove_user_from_project(
     user: UserInfo,    
     session: AsyncSession,
 ):
+    """
+    Удаление пользователя из проекта
+    себя удалить нельзя
+    """
     # сначала проверим, является ли пользователь админом, чтобы выполнять такие действия
     check_root = await check_link_owner(project_id, user.id, session)
     if user_id == user.id:
@@ -108,6 +122,9 @@ async def remove_user_from_project(
 
 
 async def project_user_list(project_id: int, user: UserInfo, session: AsyncSession):
+    """
+    Получить список пользователей в проекте
+    """
     await check_user_project(project_id, user.id, session)
     users_query = await session.execute(
         select(
@@ -142,6 +159,9 @@ async def change_admin(
     user: UserInfo,
     session: AsyncSession,
 ):
+    """
+    Выдать/забрать админские права проекта
+    """
     check_root = await check_link_owner(project_id, user.id, session)
     if user_id == user.id:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="неприемлемое действие")

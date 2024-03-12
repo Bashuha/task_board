@@ -18,14 +18,23 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
 def verify_password(plain_password, hashed_password):
+    """
+    Проверка валидности пароля
+    """
     return pwd_context.verify(plain_password, hashed_password)
 
 
 def get_password_hash(password):
+    """
+    Хеширование пароля пользователя
+    """
     return pwd_context.hash(password)
 
 
 async def register_user(user_data: model.UserResgisetr, session: AsyncSession):
+    """
+    Создание пользователя в БД
+    """
     existing_user = await UsersDAO.find_one_or_none(
         login=user_data.login, session=session
     )
@@ -54,12 +63,18 @@ async def register_user(user_data: model.UserResgisetr, session: AsyncSession):
 
 
 def create_token(data: dict):
+    """
+    Генерация токена основываясь на данных пользователя
+    """
     to_encode = data.copy()
     encoded_jwt = jwt.encode(to_encode, JWT.get("secret"), JWT.get("alg"))
     return encoded_jwt
 
 
 def update_token(user_id, login, response: Response):
+    """
+    Создание/обновление access и refresh токенов и запихивание их в куки
+    """
     access_token = create_token(
         {
             "sub": user_id,
@@ -92,7 +107,9 @@ def update_token(user_id, login, response: Response):
 async def login_user(
     response: Response, user_data: model.UserLogin, session: AsyncSession
 ):
-    print(user_data.model_dump)
+    """
+    Аутентификация пользователя в системе
+    """    
     user = await UsersDAO.check_user(arg=user_data.login, session=session)
     if not user or not verify_password(user_data.password, user.password):
         raise HTTPException(
@@ -105,6 +122,9 @@ async def login_user(
 
 
 def get_token(request: Request, response: Response):
+    """
+    Проверка наличия токенов и обновление access токена при наличии refresh
+    """
     access_token = request.cookies.get("access_token")
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
@@ -128,6 +148,9 @@ def get_token(request: Request, response: Response):
 async def get_current_user(
     token: str = Depends(get_token)
 ):
+    """
+    Проверка пользователя (залогинен или нет)
+    """
     try:
         payload = jwt.decode(token, JWT.get("secret"), JWT.get("algoritm"))
     except JWTError as e:
@@ -143,4 +166,7 @@ async def get_current_user(
 
 
 async def check_user():
+    """
+    Функция проверки пользователя для роута
+    """
     return

@@ -1,25 +1,31 @@
 from database.schemas import Project, Sections, Task, Comments, UserInfo, ProjectUser
 from sqlalchemy import insert, update, select, delete, func, or_
-from sqlalchemy.orm import joinedload, load_only, noload, contains_eager
+from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
-from projects.model import CreateProject, EditProject, ChangeArchiveStatus
+from projects.model import CreateProject, EditProject
 from fastapi import status, HTTPException
 import projects.model as my_model
 from datetime import datetime
 
 
 async def check_link_owner(project_id: int, user_id: int, session: AsyncSession):
+    """
+    Проврка, является ли пользователь админом проекта
+    """
     project_query = await session.execute(
         select(ProjectUser.project_id).
         where(ProjectUser.project_id == project_id).
         where(ProjectUser.user_id == user_id).
         where(ProjectUser.is_owner == True)
     )
-    project_model: Project = project_query.scalar_one_or_none()
+    project_model = project_query.scalar_one_or_none()
     return project_model
 
 
 async def get_projects(user: UserInfo, session: AsyncSession):
+    """
+    Получить все свои проекты
+    """
     proj_qr = await session.execute(
         select(
             Project,
@@ -85,6 +91,9 @@ async def check_user_project(project_id: int, user_id: int, session: AsyncSessio
 
 
 async def get_today_tasks(session: AsyncSession, user: UserInfo):
+    """
+    Получить свои сегодняшние задачи
+    """
     today_date = datetime.today().date()
     project_ids_query = await session.execute(
         select(ProjectUser.project_id).
@@ -143,26 +152,11 @@ async def get_today_tasks(session: AsyncSession, user: UserInfo):
     return tasks_object
 
 
-def create_task(task: Task):
-    """
-    Функия для формирования модельки задачи
-    используется в project_details
-    """
-    task_object = my_model.TaskForDetails(
-        description=task.description,
-        name=task.name,
-        status=task.status,
-        id=task.id,
-        order_number=task.order_number,
-        comments_count=len(task.comments),
-        create_date=task.create_date,
-        section_id=task.section_id,
-        to_do_date=task.to_do_date,
-    )
-    return task_object
-
-
 async def project_details(project_id: int | None, session: AsyncSession, user: UserInfo):
+    """
+    Получить детализацию проекта по его id
+    или получить "Входящие" задачи, если id проекта не был указан
+    """
     if project_id:
         project_query = await session.execute(
             select(Project, ProjectUser.is_favorites.label('is_favorites')).
@@ -301,6 +295,9 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
 
 
 async def create_project(project: CreateProject, user: UserInfo, session: AsyncSession):
+    """
+    Создание проекта и основного раздела для него
+    """
     # сначала создаем проект
     project_data = Project(name=project.name, owner=user.login)
     session.add(project_data)
@@ -324,6 +321,10 @@ async def create_project(project: CreateProject, user: UserInfo, session: AsyncS
 
 
 async def edit_project(project: EditProject, session: AsyncSession, user: UserInfo):
+    """
+    Редактирование проекта, менять проект может только админ
+    однако добавлять у себя в избранное может каждый пользователь в проекте
+    """
     update_project_data = project.model_dump(exclude={'id'}, exclude_unset=True)
     if update_project_data.get('is_favorites') is not None:
         await session.execute(
@@ -346,6 +347,12 @@ async def edit_project(project: EditProject, session: AsyncSession, user: UserIn
 
 
 async def exit_project(project_id: int, session: AsyncSession, user: UserInfo):
+    """
+    Выход пользователя из проекта
+    и передача админских прав если из проекта уходит админ.
+    Передача админских прав происходит в том случае,
+    если после нашего выхода, админов в проекте не осталось
+    """
     # для начала проверим, является ли пользователь админом
     check_root = await check_link_owner(project_id, user.id, session)
     del_trigger = True

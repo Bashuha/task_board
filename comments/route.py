@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 import comments.functions as comment_func
 from users.functions import get_current_user
 from database.schemas import UserInfo
-from comments.model import CreateComment, EditComment, NotFoundError
+from comments.model import CreateComment, EditComment, NotFoundError, DeleteComment
 
 
 router = APIRouter(tags=['Comment'])
@@ -46,8 +46,8 @@ async def edit_comment(
     summary='Удаление комментария'
 )
 async def delete_comment(
-    comment_id: int,
+    comment_model: DeleteComment,
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)    
 ):
-    return await comment_func.delete_comment(comment_id, session, user)
+    return await comment_func.delete_comment(comment_model, session, user)

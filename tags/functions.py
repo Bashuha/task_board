@@ -11,6 +11,9 @@ async def get_tag_list(
     user: UserInfo,
     project_id: int,
 ):
+    """
+    Получаем список всех тегов проекта
+    """
     await check_user_project(project_id, user.id, session)
 
     tag_query = await session.execute(
@@ -27,6 +30,9 @@ async def create_tag(
     tag_model: tag_model.CreateTag,
     user: UserInfo,
 ):
+    """
+    Создаем тег внутри конкретного проекта
+    """
     await check_user_project(tag_model.project_id, user.id, session)
 
     tag_dict = tag_model.model_dump(exclude_unset=True)
@@ -39,6 +45,9 @@ async def edit_tag(
     tag_model: tag_model.EditTag,
     user: UserInfo
 ):
+    """
+    Редактировать тег конкретного проекта
+    """
     await check_user_project(tag_model.project_id, user.id, session)
 
     tag_dict = tag_model.model_dump(exclude={"id"}, exclude_unset=True)
@@ -55,6 +64,9 @@ async def delete_tag(
     tag_model: tag_model.DeleteTag,
     user: UserInfo
 ):
+    """
+    Удалить тег внутри конкретного проекта
+    """
     await check_user_project(tag_model.project_id, user.id, session)
 
     await session.execute(
@@ -72,6 +84,9 @@ async def add_tag_to_task(
     tag_model: tag_model.ManageTag,
     user: UserInfo
 ):
+    """
+    Прикрепить тег к задаче
+    """
     await check_user_project(tag_model.project_id, user.id, session)
 
     check_task_query = await session.execute(
@@ -99,6 +114,9 @@ async def remove_tag_from_task(
     tag_model: tag_model.ManageTag,
     user: UserInfo
 ):
+    """
+    Открепить тег от задачи
+    """
     await check_user_project(tag_model.project_id, user.id, session)
     
     check_task_query = await session.execute(

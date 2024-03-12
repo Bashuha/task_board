@@ -89,11 +89,11 @@ async def edit_task(
     summary="Изменение статуса задачи"
 )
 async def change_task_status(
-    task: ChangeTaskStatus,
+    task_model: ChangeTaskStatus,
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await task_func.change_task_status(task, user, session)
+    return await task_func.change_task_status(task_model, user, session)
 
 
 @router.delete(

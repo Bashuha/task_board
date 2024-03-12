@@ -2,6 +2,7 @@ from pydantic import BaseModel
 
 
 class CreateComment(BaseModel):
+    project_id : int
     task_id: int
     text: str
 
@@ -9,6 +10,11 @@ class CreateComment(BaseModel):
 class EditComment(BaseModel):
     id: int
     text: str
+
+class DeleteComment(BaseModel):
+    id: int
+    project_id: int
+    task_id: int
 
 
 class NotFoundError(BaseModel):

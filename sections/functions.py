@@ -7,6 +7,9 @@ from database.schemas import Project, Sections, UserInfo
 
 
 async def create_section(section: CreateSection, session: AsyncSession, user: UserInfo):
+    """
+    Создание раздела
+    """
     check_root = await check_link_owner(section.project_id, user.id, session)
     if check_root:
         project_query = await session.execute(
@@ -26,6 +29,9 @@ async def create_section(section: CreateSection, session: AsyncSession, user: Us
 
 
 async def edit_section(section: EditSection, session: AsyncSession, user: UserInfo):
+    """
+    Редактирование раздела
+    """
     check_root = await check_link_owner(section.project_id, user.id, session)
     if check_root:
         section_data = section.model_dump(exclude={'id'})
@@ -39,14 +45,23 @@ async def edit_section(section: EditSection, session: AsyncSession, user: UserIn
 
 
 async def delete_section(section: DeleteSection, session: AsyncSession, user: UserInfo):
+    """
+    Удаление раздела
+    """
     check_root = await check_link_owner(section.project_id, user.id, session)
     if check_root:
-        delete_query = delete(Sections).where(Sections.id == section.id).where(Sections.is_basic == False)
-        await session.execute(delete_query)
+        await session.execute(
+            delete(Sections).
+            where(Sections.id == section.id).
+            where(Sections.is_basic == False)
+        )
         await session.commit()
 
 
 async def change_section_order(section_order: SectionOrder, session: AsyncSession, user: UserInfo):
+    """
+    Изменение порядка разделов
+    """
     check_root = await check_link_owner(section_order.project_id, user.id, session)
     if check_root:
         new_order_list = list()
@@ -64,7 +79,12 @@ async def change_section_order(section_order: SectionOrder, session: AsyncSessio
             # добавляем полученный словарь в список для UPDATE
             new_order_list.append(order_dict)
         # одним запросом обновляем порядок, используя наш список словарей
-        await session.execute(update(Sections).where(Sections.project_id==section_order.project_id), new_order_list, execution_options={"synchronize_session": False})
+        await session.execute(
+            update(Sections).
+            where(Sections.project_id==section_order.project_id),
+            new_order_list,
+            execution_options={"synchronize_session": False}
+        )
         await session.commit()
         # мы исользовали "массовое обновление по первичному ключу" и из-за того, что мы 
         # добавили дополнительный "where" критерий в виде project_id, нам необходимо

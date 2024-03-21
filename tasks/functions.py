@@ -87,7 +87,6 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     """
     Создание задачи
     """
-
     # есть ли пользователь в проекте
     task_query = await session.execute(
         select(Sections.id, Sections.project_id, func.count(Task.order_number).label('task_count')).
@@ -97,10 +96,11 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     )
     task_info = task_query.one()
     await check_user_project(task_info.project_id, user.id, session)
+    task_data = task.model_dump(exclude_unset=True)
     if task.executor_id:
         await check_user_project(task_info.project_id, task.executor_id, session)
+        task_data['task_giver_id'] = user.id
     
-    task_data = task.model_dump(exclude_unset=True)
     task_data['order_number'] = task_info.task_count + 1
     task_data['owner_id'] = user.id
     task_data['project_id'] = task_info.project_id
@@ -146,7 +146,9 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
     if task.executor_id:
         await check_user_project(project_id, task.executor_id, session)
         task_data['task_giver_id'] = user.id
-
+    elif "executor_id" in task_data: 
+        task_data['task_giver_id'] = None
+        
     # далее просто обновляем все данные в объекте Task и комитим
     if not task_data:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="некорректные данные")

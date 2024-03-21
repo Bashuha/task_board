@@ -87,3 +87,16 @@ async def remove_tag_from_task(
     user: UserInfo = Depends(get_current_user)
 ):
     return await tag_func.remove_tag_from_task(session, tag_model, user)
+
+
+@router.get(
+    '/tag_colors',
+    status_code=status.HTTP_200_OK,
+    summary="Список цветов для тега",
+    response_model=tag_model.TagColors,
+)
+async def get_tag_colors(
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await tag_func.get_tag_colors(session)

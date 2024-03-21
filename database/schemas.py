@@ -1,5 +1,5 @@
 from __future__ import annotations
-from sqlalchemy import Column, ForeignKey, Table, inspect, func
+from sqlalchemy import Column, ForeignKey, Table, select, insert, func
 from sqlalchemy.dialects.mysql import (
     INTEGER,
     VARCHAR,
@@ -8,9 +8,10 @@ from sqlalchemy.dialects.mysql import (
     TEXT,
     DATE
 )
-import datetime
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped
-from sqlalchemy.ext.declarative import as_declarative
+from database.my_engine import engine
+from sqlalchemy.ext.asyncio import AsyncSession
+# from sqlalchemy.ext.declarative import as_declarative
 
 
 # @as_declarative()
@@ -142,14 +143,23 @@ class ProjectUser(Base):
     user_info: Mapped[UserInfo] = relationship()
 
 
+class TagColor(Base):
+    __tablename__ = "tag_color"
+
+    id = Column(INTEGER(), primary_key=True, autoincrement=True)
+    name = Column(VARCHAR(50), nullable=False)
+    color = Column(VARCHAR(7), nullable=False)
+
+
 class Tag(Base):
     __tablename__ = "tag"
 
     id = Column(INTEGER(), primary_key=True, autoincrement=True)
     name = Column(VARCHAR(255), nullable=False)
     project_id = Column(ForeignKey(Project.id), nullable=False)
-    color = Column(VARCHAR(7), nullable=True)
+    color_id = Column(ForeignKey(TagColor.id), nullable=False, server_default="1")
 
+    color_info: Mapped[TagColor] = relationship()
     project: Mapped[Project] = relationship()
     task_info: Mapped[Task] = relationship(
         secondary=tag_task_link,
@@ -157,12 +167,38 @@ class Tag(Base):
     )
 
 
-# class TagTask(Base):
-#     __tablename__= "task_tag"
-#     __abstract__ = True
+async def init_models():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
-#     task_id = Column(ForeignKey(Task.id), primary_key=True, nullable=False)
-#     tag_id = Column(ForeignKey(Tag.id), primary_key=True, nullable=False)
-
-#     task_info: Mapped[Task] = relationship()
-#     tag_info: Mapped[Tag] = relationship()
+    async with engine.begin() as session:
+        color_dict = {
+            "1": {
+                "id": 1,
+                "name": "серый",
+                "color": "#999999"
+            },
+            "2": {
+                "id": 2,
+                "name": "зелёный",
+                "color": "#369307"
+            },
+            "3": {
+                "id": 3,
+                "name": "оранжевый",
+                "color": "#f48318"
+            },
+        }
+        color_ids_query = await session.execute(
+            select(TagColor.id)
+        )
+        color_ids = color_ids_query.scalars().all()
+        for i in color_ids:
+            color_dict.pop(str(i), None)
+        
+        if color_dict:
+            await session.execute(
+                insert(TagColor).
+                values(list(color_dict.values()))
+            )
+            await session.commit()

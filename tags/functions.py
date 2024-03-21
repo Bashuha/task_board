@@ -1,8 +1,8 @@
-from sqlalchemy import insert, update, delete, select
+from sqlalchemy import insert, tuple_, update, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 import tags.model as tag_model
 from fastapi import HTTPException, status
-from database.schemas import Task, UserInfo, Tag, tag_task_link
+from database.schemas import Task, UserInfo, Tag, tag_task_link, TagColor
 from projects.functions import check_user_project
 
 
@@ -99,11 +99,20 @@ async def add_tag_to_task(
     check_task = check_task_query.scalar_one_or_none()
     if not check_task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='такой задачи в проекте нет')
-    
+
+    value_list = list()
+    for tag in tag_model.tag_ids:
+        tag_dict = {
+            "tag_id": tag.id,
+            "task_id": tag_model.task_id
+        }
+        value_list.append(tag_dict)
+
     await session.execute(
         tag_task_link.insert().values(
-            tag_id=tag_model.tag_id,
-            task_id=tag_model.task_id
+            # tag_id=tag_model.tag_ids,
+            # task_id=tag_model.task_id
+            value_list
         )
     )
     await session.commit()
@@ -121,16 +130,44 @@ async def remove_tag_from_task(
     
     check_task_query = await session.execute(
         select(Task.id).
-        where(Task.project_id == tag_model.project_id, Task.id == tag_model.task_id)
+        where(
+            Task.project_id == tag_model.project_id,
+            Task.id == tag_model.task_id
+        )
     )
     check_task = check_task_query.scalar_one_or_none()
     if not check_task:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='такой задачи в проекте нет')
 
+    # await session.execute(
+    #     tag_task_link.delete().where(
+    #         tag_task_link.c.tag_id == tag_model.tag_ids,
+    #         tag_task_link.c.task_id == tag_model.task_id
+    #     )
+    # )
+
+    value_list = list()
+    for tag in tag_model.tag_ids:
+        tag_dict = {
+            "tag_id": tag.id,
+            "task_id": tag_model.task_id
+        }
+        value_list.append(tag_dict)
+
     await session.execute(
-        tag_task_link.delete().where(
-            tag_task_link.c.tag_id == tag_model.tag_id,
-            tag_task_link.c.task_id == tag_model.task_id
-        )
+        tag_task_link.delete().
+        where(tuple_(tag_task_link.c.tag_id, tag_task_link.c.task_id).in_(value_list))
     )
+
     await session.commit()
+
+
+async def get_tag_colors(
+    session: AsyncSession,
+):
+    color_query = await session.execute(
+        select(TagColor)
+    )
+    color_list: list[TagColor] = color_query.scalars().all()
+    colors = tag_model.TagColors(colors=color_list)
+    return colors

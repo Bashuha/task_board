@@ -60,3 +60,17 @@ class ManageTag(_Base):
     tag_ids: List[TagIds]
     task_id: int
     project_id: int
+
+    def sort_ids(self):
+        sorted_ids = sorted(self.tag_ids, key=lambda tag: tag.id)
+        return sorted_ids
+
+
+
+class TagIDList(_Base):
+    ids: List[int]
+
+    @model_validator(mode="after")
+    def sort_ids(self):
+        self.ids = sorted(self.ids)
+        return self

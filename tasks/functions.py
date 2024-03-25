@@ -6,6 +6,7 @@ from tasks.model import CreateTask, EditTask
 from fastapi import HTTPException, status
 import tasks.model as my_model
 from projects.functions import check_user_project
+from tags.functions import change_task_tags
 
 
 async def get_task_list(session: AsyncSession, user: UserInfo):
@@ -142,6 +143,11 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
         task_number = task_query.one()
         task_data['order_number'] = task_number.task_count + 1
         project_id = new_project_id
+
+    if 'tag_ids' in task_data:
+        await change_task_tags(session, task.tag_ids, project_id, task.id)
+        task_data.pop('tag_ids')
+
     # при назначении исполнителя проверяем его наличие в проекте
     if task.executor_id:
         await check_user_project(project_id, task.executor_id, session)
@@ -150,14 +156,13 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
         task_data['task_giver_id'] = None
         
     # далее просто обновляем все данные в объекте Task и комитим
-    if not task_data:
-        raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="некорректные данные")
-    await session.execute(
-        update(Task).
-        where(Task.id == task.id).
-        values(task_data)
-    )
-    await session.commit()
+    if task_data:
+        await session.execute(
+            update(Task).
+            where(Task.id == task.id).
+            values(task_data)
+        )
+        await session.commit()
 
 
 async def change_task_status(

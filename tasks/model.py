@@ -95,6 +95,12 @@ class EditTask(_Base):
     description: str = "New description"
     section_id: int | None = None
     to_do_date: date | None = None
+    tag_ids: List[int] | None = None
+
+    @model_validator(mode="after")
+    def sort_ids(self):
+        self.tag_ids = sorted(self.tag_ids)
+        return self
 
 
 class ChangeTaskStatus(_Base):

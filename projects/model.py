@@ -26,7 +26,7 @@ class SectionForDetails(_Base):
 class TagInfo(_Base):
     id: int
     name: str
-    color: str
+    color_id: int
 
 
 class TaskForDetails(_Base):

@@ -2,7 +2,7 @@ from database.my_engine import get_db
 from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import tags.functions as tag_func
-import tags.model as tag_model
+import tags.model as tag_models
 from users.functions import get_current_user
 from database.schemas import UserInfo
 
@@ -13,7 +13,7 @@ router = APIRouter(tags=['Tag'])
 @router.get(
     '/tag_list',
     status_code=status.HTTP_200_OK,
-    response_model=tag_model.TagList,
+    response_model=tag_models.TagList,
     summary='Получение всех тегов проекта'
 )
 async def get_tag_list(
@@ -30,7 +30,7 @@ async def get_tag_list(
     summary='Создание тега'
 )
 async def get_tag_list(
-    tag_model: tag_model.CreateTag,
+    tag_model: tag_models.CreateTag,
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user),
 ):
@@ -43,7 +43,7 @@ async def get_tag_list(
     summary='Редактирование тега'
 )
 async def edit_tag(
-    tag_model: tag_model.EditTag,
+    tag_model: tag_models.EditTag,
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
@@ -56,44 +56,44 @@ async def edit_tag(
     summary="Удаление тега"
 )
 async def delete_tag(
-    tag_model: tag_model.DeleteTag,
+    tag_model: tag_models.DeleteTag,
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
     return await tag_func.delete_tag(session, tag_model, user)
 
 
-@router.post(
-    '/add_tag',
-    status_code=status.HTTP_200_OK,
-    summary="Добавление тега к задаче"
-)
-async def add_tag_to_task(
-    tag_model: tag_model.ManageTag,
-    session: AsyncSession = Depends(get_db),
-    user: UserInfo = Depends(get_current_user)
-):
-    return await tag_func.add_tag_to_task(session, tag_model, user)
+# @router.post(
+#     '/add_tag',
+#     status_code=status.HTTP_200_OK,
+#     summary="Добавление тега к задаче"
+# )
+# async def add_tag_to_task(
+#     tag_model: tag_model.ManageTag,
+#     session: AsyncSession = Depends(get_db),
+#     user: UserInfo = Depends(get_current_user)
+# ):
+#     return await tag_func.add_tag_to_task(session, tag_model, user)
 
 
-@router.delete(
-    '/remove_tag_task',
-    status_code=status.HTTP_200_OK,
-    summary="Удаление тега из задачи"
-)
-async def remove_tag_from_task(
-    tag_model: tag_model.ManageTag,
-    session: AsyncSession = Depends(get_db),
-    user: UserInfo = Depends(get_current_user)
-):
-    return await tag_func.remove_tag_from_task(session, tag_model, user)
+# @router.delete(
+#     '/remove_tag_task',
+#     status_code=status.HTTP_200_OK,
+#     summary="Удаление тега из задачи"
+# )
+# async def remove_tag_from_task(
+#     tag_model: tag_model.ManageTag,
+#     session: AsyncSession = Depends(get_db),
+#     user: UserInfo = Depends(get_current_user)
+# ):
+#     return await tag_func.remove_tag_from_task(session, tag_model, user)
 
 
 @router.get(
     '/tag_colors',
     status_code=status.HTTP_200_OK,
     summary="Список цветов для тега",
-    response_model=tag_model.TagColors,
+    response_model=tag_models.TagColors,
 )
 async def get_tag_colors(
     session: AsyncSession = Depends(get_db),

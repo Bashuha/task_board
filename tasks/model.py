@@ -99,7 +99,8 @@ class EditTask(_Base):
 
     @model_validator(mode="after")
     def sort_ids(self):
-        self.tag_ids = sorted(self.tag_ids)
+        if self.tag_ids:
+            self.tag_ids = sorted(self.tag_ids)
         return self
 
 

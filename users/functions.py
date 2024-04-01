@@ -1,4 +1,4 @@
-from . import model
+import users.model as user_model
 from users.dao import UsersDAO
 from fastapi import HTTPException
 from passlib.context import CryptContext
@@ -31,7 +31,7 @@ def get_password_hash(password):
     return pwd_context.hash(password)
 
 
-async def register_user(user_data: model.UserResgisetr, session: AsyncSession):
+async def register_user(user_data: user_model.UserResgisetr, session: AsyncSession):
     """
     Создание пользователя в БД
     """
@@ -105,7 +105,7 @@ def update_token(user_id, login, response: Response):
 
 
 async def login_user(
-    response: Response, user_data: model.UserLogin, session: AsyncSession
+    response: Response, user_data: user_model.UserLogin, session: AsyncSession
 ):
     """
     Аутентификация пользователя в системе
@@ -118,7 +118,7 @@ async def login_user(
     user_info = await UsersDAO.find_by_id(session=session, arg=user.id)
     update_token(user_id=str(user.id), login=user.login, response=response)
 
-    return model.UserInfo.model_validate(user_info)
+    return user_model.UserInfo.model_validate(user_info)
 
 
 def get_token(request: Request, response: Response):
@@ -161,7 +161,7 @@ async def get_current_user(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="не тот токен"
         )
-    user = model.GetUser(id=payload.get("sub"), login=payload.get("login"))
+    user = user_model.GetUser(id=payload.get("sub"), login=payload.get("login"))
     return user
 
 

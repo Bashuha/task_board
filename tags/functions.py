@@ -36,8 +36,13 @@ async def create_tag(
     await check_user_project(tag_model.project_id, user.id, session)
 
     tag_dict = tag_model.model_dump(exclude_unset=True)
-    await session.execute(insert(Tag).values(**tag_dict))
+    tag_query = await session.execute(
+        insert(Tag).
+        values(tag_dict)
+    )
+    tag_id = tag_query.lastrowid
     await session.commit()
+    return tag_id
 
 
 async def edit_tag(
@@ -81,16 +86,15 @@ async def delete_tag(
 
 async def remove_tag_from_task(
     session: AsyncSession,
-    tag_ids: list[int],
     task_id: int,
 ):
     """
-    Открепить тег от задачи
+    Открепить теги от задачи
     """
-    value_list = list()
-    for tag_id in tag_ids:
-        tag_values = (tag_id, task_id)
-        value_list.append(tag_values)
+    # value_list = list()
+    # for tag_id in tag_ids:
+    #     tag_values = (tag_id, task_id)
+    #     value_list.append(tag_values)
 
     await session.execute(
         tag_task_link.delete().
@@ -122,7 +126,7 @@ async def change_task_tags(
     exist_tag_ids = exist_tag_query.scalars().all()
     tag_project_check = set(incoming_ids).issubset(exist_tag_ids)
     if tag_project_check:
-        await remove_tag_from_task(session, exist_tag_ids, task_id)
+        await remove_tag_from_task(session, task_id)
 
         value_list = list()
         if incoming_ids:

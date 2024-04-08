@@ -188,6 +188,41 @@ async def init_models():
                 "name": "оранжевый",
                 "color": "#f48318"
             },
+            "4": {
+                "id":4,
+                "name": "красный",
+                "color": "#DC2626"
+            },
+            "5": {
+                "id":5,
+                "name": "синий",
+                "color": "#1D4ED8"
+            },
+            "6": {
+                "id":6,
+                "name": "голубой",
+                "color": "#06B6D4"
+            },
+            "7": {
+                "id":7,
+                "name": "фиолетовый",
+                "color": "#9112BE"
+            },
+            "8": {
+                "id":8,
+                "name": "желтый",
+                "color": "#F4D118"
+            },
+            "9": {
+                "id":9,
+                "name": "розовый",
+                "color": "#F02BC5"
+            },
+            "10": {
+                "id":10,
+                "name": "коричневый",
+                "color": "#92400E"
+            },
         }
         color_ids_query = await session.execute(
             select(TagColor.id)

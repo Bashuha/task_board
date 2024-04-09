@@ -122,7 +122,8 @@ async def get_today_tasks(session: AsyncSession, user: UserInfo):
             joinedload(Task.comments).
                 load_only(
                     Comments.id
-                )
+                ),
+            joinedload(Task.tag_info),
         ).
         where(
             Task.to_do_date <= today_date,

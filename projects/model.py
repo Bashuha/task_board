@@ -71,6 +71,7 @@ class TodayTask(_Base):
     project_name: Any = Field(validation_alias='project')
     section_name: Any = Field(validation_alias='sections')
     comments_count: Any = Field(validation_alias="comments")
+    tags: List[TagInfo] = Field(validation_alias="tag_info")
 
     @model_validator(mode='after')
     def change_field(self):

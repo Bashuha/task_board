@@ -105,7 +105,7 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     task_data['order_number'] = task_info.task_count + 1
     task_data['owner_id'] = user.id
     task_data['project_id'] = task_info.project_id
-        
+    task_data.pop('tag_ids')
     task_id_query = await session.execute(insert(Task).values(task_data))
     task_id = task_id_query.lastrowid
     await session.commit()

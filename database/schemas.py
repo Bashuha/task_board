@@ -105,7 +105,7 @@ class Task(Base):
     section_id = Column(INTEGER(), ForeignKey(Sections.id))
     status = Column(BOOLEAN(), server_default="1")
     order_number = Column(INTEGER(), nullable=False)
-    to_do_date = Column(DATE(), nullable=False)
+    to_do_date = Column(DATE(), nullable=True)
 
     project: Mapped[Project] = relationship()
     sections: Mapped[Sections] = relationship()

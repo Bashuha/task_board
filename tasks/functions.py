@@ -106,8 +106,11 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     task_data['owner_id'] = user.id
     task_data['project_id'] = task_info.project_id
         
-    await session.execute(insert(Task).values(task_data))
+    task_id_query = await session.execute(insert(Task).values(task_data))
+    task_id = task_id_query.lastrowid
     await session.commit()
+    if task.tag_ids:
+        await change_task_tags(session, task.tag_ids, task_info.project_id, task_id)
 
 
 async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):

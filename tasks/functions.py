@@ -111,6 +111,7 @@ async def create_task(task: CreateTask, session: AsyncSession, user: UserInfo):
     await session.commit()
     if task.tag_ids:
         await change_task_tags(session, task.tag_ids, task_info.project_id, task_id)
+    return task_id
 
 
 async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):

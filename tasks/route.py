@@ -1,13 +1,28 @@
 from database.my_engine import get_db
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import tasks.functions as task_func
 from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, DeleteTask, TaskList, ChangeTaskStatus, TaskOrder
-from users.functions import get_current_user
+from users.functions import get_current_user, websocket_user
 from database.schemas import UserInfo
+import projects.functions as project_func
+from typing import Annotated
 
 
-router = APIRouter(tags=['Task'])
+router = APIRouter(
+    tags=['Task'],
+    # dependencies=[
+        # Depends(get_db),
+        # Depends(get_current_user)
+    # ]
+)
+websocket_route = APIRouter(
+    tags=['WSRoute'],
+    dependencies=[
+        # Depends(get_db),
+        Depends(websocket_user)
+    ]
+)
 
 
 error_description = """
@@ -121,3 +136,55 @@ async def change_task_order(
     user: UserInfo = Depends(get_current_user)
 ):
     return await task_func.change_task_order(task_order, session, user)
+
+
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: list[WebSocket] = []
+        self.users_id_connectiobs: dict[int:WebSocket] = dict()
+
+    async def connect(self, websocket: WebSocket, user_id: int):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+        self.users_id_connectiobs[user_id] = websocket
+
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+
+    async def send_personal_message(self, message: str, websocket: WebSocket):
+        await websocket.send_text(message)
+
+    async def broadcast(self, json_data: dict):
+        for connection in self.active_connections:
+            # await connection.send_text(message)
+            await connection.send_json(json_data)
+
+
+manager = ConnectionManager()
+
+
+@websocket_route.websocket(
+    "/ws",
+    # dependencies=[
+        # Depends(websocket_user),
+        # Depends(get_db)
+    # ]
+)
+async def websocket_try(
+    websocket: WebSocket,
+    session: Annotated[AsyncSession, Depends(get_db)],
+    # user: UserInfo = Depends(websocket_user)
+):
+    user_id = 1
+    # await manager.connect(websocket, user.id)
+    await manager.connect(websocket, user_id)
+    try:
+        while True:
+            data = await websocket.receive_text()
+            print(data)
+            # await task_func.create_task(task, session, user)
+            # await websocket.send_text(f"Message text was: {data}")
+            # await manager.broadcast(await project_func.get_projects(user, session))
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+        await manager.broadcast({"answer":"this is the answer"})

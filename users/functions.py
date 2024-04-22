@@ -9,7 +9,7 @@ from database.schemas import UserInfo, Project
 from database.config import JWT
 from database.my_engine import get_db
 from datetime import datetime, timedelta, timezone
-from fastapi import Request, Response, status, HTTPException, Depends
+from fastapi import Request, Response, status, HTTPException, Depends, WebSocket
 from projects.model import CreateProject
 from projects.functions import create_project
 
@@ -147,6 +147,50 @@ def get_token(request: Request, response: Response):
 
 async def get_current_user(
     token: str = Depends(get_token)
+):
+    """
+    Проверка пользователя (залогинен или нет)
+    """
+    try:
+        payload = jwt.decode(token, JWT.get("secret"), JWT.get("algoritm"))
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"{e}"
+        )
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="не тот токен"
+        )
+    user = user_model.GetUser(id=payload.get("sub"), login=payload.get("login"))
+    return user
+
+
+def get_socket_token(request: WebSocket, response: Response):
+    """
+    Проверка наличия токенов и обновление access токена при наличии refresh
+    """
+    access_token = request.cookies.get("access_token")
+    refresh_token = request.cookies.get("refresh_token")
+    if not refresh_token:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+    if not access_token and refresh_token:
+        try:
+            payload = jwt.decode(refresh_token, JWT.get("secret"), JWT.get("algoritm"))
+        except JWTError as e:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED, detail=f"{e}"
+            )
+        access_token = update_token(
+            user_id=payload.get("sub"),
+            login=payload.get("login"),
+            response=response
+        )
+
+    return access_token
+
+
+async def websocket_user(
+    token: str = Depends(get_socket_token)
 ):
     """
     Проверка пользователя (залогинен или нет)

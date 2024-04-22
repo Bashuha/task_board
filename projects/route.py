@@ -1,6 +1,6 @@
 from database.my_engine import get_db
 from database.schemas import UserInfo
-from fastapi import APIRouter, Depends, status, WebSocket, WebSocketException
+from fastapi import APIRouter, Depends, WebSocketDisconnect, status, WebSocket, WebSocketException
 from sqlalchemy.ext.asyncio import AsyncSession
 import projects.functions as project_func
 import projects.admin_func as admin_func
@@ -213,6 +213,21 @@ async  def exit_project(
     return await project_func.exit_project(project_id, session, user)
 
 
+# @router.websocket('/ws')
+# async def websocket_try(
+#     websocket: WebSocket,
+#     manager: ConnectionManager,
+#     session: AsyncSession = Depends(get_db),
+#     user: UserInfo = Depends(get_current_user)
+# ):
+#     await manager.connect(websocket)
+#     try:
+#         while True:
+#             await websocket.receive_json(await project_func.get_projects(user, session))
+#     except WebSocketException:
+#         pass
+
+
 # class ConnectionManager:
 #     def __init__(self):
 #         self.active_connections: list[WebSocket] = []
@@ -227,22 +242,39 @@ async  def exit_project(
 #     async def send_personal_message(self, message: str, websocket: WebSocket):
 #         await websocket.send_text(message)
 
-#     async def broadcast(self, message: str):
+#     async def broadcast(self, json_data: dict):
 #         for connection in self.active_connections:
-#             await connection.send_text(message)
+#             # await connection.send_text(message)
+#             await connection.send_json(json_data)
 
 
+# manager = ConnectionManager()
 
-# @router.websocket('/ws')
+
+# @router.websocket("/ws")
 # async def websocket_try(
 #     websocket: WebSocket,
-#     manager: ConnectionManager,
 #     session: AsyncSession = Depends(get_db),
 #     user: UserInfo = Depends(get_current_user)
 # ):
 #     await manager.connect(websocket)
 #     try:
 #         while True:
+#             # data = await websocket.receive_json()
+#             await manager.broadcast(await project_func.get_projects(user, session))
+#     except WebSocketDisconnect:
+#         manager.disconnect(websocket)
+
+# @router.websocket('/ws')
+# async def websocket_try(
+#     websocket: WebSocket,
+#     session: AsyncSession = Depends(get_db),
+#     user: UserInfo = Depends(get_current_user)
+# ):
+#     try:
+#         await websocket.accept()
+#         while True:
 #             data = await websocket.receive_json(await project_func.get_projects(user, session))
-#     except WebSocketException:
-#         pass
+#             await websocket.send_json(data)
+#     except WebSocketException as e:
+#         print(e)

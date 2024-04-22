@@ -67,14 +67,14 @@ class Project(Base):
     __tablename__ = "Project"
 
     id = Column(INTEGER(), primary_key=True)
-    name = Column(VARCHAR(255), nullable=False)
+    name = Column(VARCHAR(150), nullable=False)
     date = Column(DATETIME(timezone=True), server_default=func.now())
     is_incoming = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
     owner = Column(VARCHAR(50), ForeignKey(User.login), nullable=False)
 
-    tasks: Mapped[list[Task]] = relationship()
-    sections: Mapped[list[Sections]] = relationship()
+    tasks: Mapped[list[Task]] = relationship(back_populates="project")
+    sections: Mapped[list[Sections]] = relationship(back_populates='project')
     user_link: Mapped[list[ProjectUser]] = relationship()
 
 
@@ -82,13 +82,13 @@ class Sections(Base):
     __tablename__ = "Sections"
 
     id = Column(INTEGER(), primary_key=True)
-    name = Column(VARCHAR(255), nullable=False)
+    name = Column(VARCHAR(150), nullable=False)
     project_id = Column(INTEGER(), ForeignKey(Project.id), nullable=False)
     order_number = Column(INTEGER(), nullable=False)
     is_basic = Column(BOOLEAN(), nullable=False, server_default='0')
 
-    project: Mapped[Project] = relationship()
-    tasks: Mapped[list[Task]] = relationship()
+    project: Mapped[Project] = relationship(back_populates='sections')
+    tasks: Mapped[list[Task]] = relationship(back_populates='sections')
 
 
 class Task(Base):
@@ -107,9 +107,9 @@ class Task(Base):
     order_number = Column(INTEGER(), nullable=False)
     to_do_date = Column(DATE(), nullable=True)
 
-    project: Mapped[Project] = relationship()
-    sections: Mapped[Sections] = relationship()
-    comments: Mapped[list[Comments]] = relationship()
+    project: Mapped[Project] = relationship(back_populates="tasks")
+    sections: Mapped[Sections] = relationship(back_populates="tasks")
+    comments: Mapped[list[Comments]] = relationship(back_populates="Task")
     executor_info: Mapped[UserInfo] = relationship(foreign_keys=[executor_id])
     owner_info: Mapped[UserInfo] = relationship(foreign_keys=[owner_id])
     task_giver_info: Mapped[UserInfo] = relationship(foreign_keys=[task_giver_id])
@@ -128,7 +128,7 @@ class Comments(Base):
     create_at = Column(DATETIME(timezone=True), server_default=func.now())
     task_id = Column(INTEGER(), ForeignKey(Task.id), nullable=True)
 
-    Task: Mapped[Task] = relationship()
+    Task: Mapped[Task] = relationship(back_populates='comments')
 
 
 class ProjectUser(Base):

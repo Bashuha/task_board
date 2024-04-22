@@ -193,6 +193,7 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
             join(ProjectUser, isouter=True).
             where(Project.id == project_id).
             where(Project.is_incoming == False).
+            where(Project.is_archive == False).
             where(ProjectUser.user_id == user.id)
         )
         project_info: Project = project_query.unique().one_or_none()

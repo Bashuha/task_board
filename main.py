@@ -1,4 +1,4 @@
-from fastapi import APIRouter, FastAPI, HTTPException, Query, Request, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, Request
 import uvicorn
 from database.config import API
 from fastapi.responses import JSONResponse
@@ -21,7 +21,7 @@ from tags.route import router as tag_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     log = logging.getLogger(__name__)
-    log.setLevel(logging.INFO)
+    log.setLevel(logging.ERROR)
     Path('logs').mkdir(mode=0o774, exist_ok=True)
     logger = logging.getLogger("uvicorn.error")
     handler = RotatingFileHandler(

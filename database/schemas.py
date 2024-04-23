@@ -75,7 +75,7 @@ class Project(Base):
 
     tasks: Mapped[list[Task]] = relationship(back_populates="project")
     sections: Mapped[list[Sections]] = relationship(back_populates='project')
-    user_link: Mapped[list[ProjectUser]] = relationship()
+    user_link: Mapped[list[ProjectUser]] = relationship(back_populates="project_info")
 
 
 class Sections(Base):
@@ -139,7 +139,7 @@ class ProjectUser(Base):
     is_favorites = Column(BOOLEAN(), nullable=False, server_default="0")
     is_owner = Column(BOOLEAN(), nullable=False, server_default="0")
 
-    project_info: Mapped[Project] = relationship()
+    project_info: Mapped[Project] = relationship(back_populates="user_link")
     user_info: Mapped[UserInfo] = relationship()
 
 

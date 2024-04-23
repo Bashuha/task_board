@@ -1,27 +1,20 @@
+from sqlalchemy import select
 from database.my_engine import get_db
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import tasks.functions as task_func
 from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, DeleteTask, TaskList, ChangeTaskStatus, TaskOrder
-from users.functions import get_current_user, websocket_user
-from database.schemas import UserInfo
+from users.functions import get_current_user, websocket_user, get_socket_token
+from database.schemas import ProjectUser, UserInfo
 import projects.functions as project_func
-from typing import Annotated
+import json
 
 
 router = APIRouter(
-    tags=['Task'],
-    # dependencies=[
-        # Depends(get_db),
-        # Depends(get_current_user)
-    # ]
+    tags=['Task']
 )
 websocket_route = APIRouter(
-    tags=['WSRoute'],
-    dependencies=[
-        # Depends(get_db),
-        Depends(websocket_user)
-    ]
+    tags=['WSRoute']
 )
 
 
@@ -34,8 +27,12 @@ error_description = """
 """
 
 
-responses_dict = {404: {"model": ErrorNotFound,
-                        "description": "The task not found"}}
+responses_dict = {
+    404: {
+        "model": ErrorNotFound,
+        "description": "The task not found"
+    }
+}
 
 
 @router.get(
@@ -141,50 +138,65 @@ async def change_task_order(
 class ConnectionManager:
     def __init__(self):
         self.active_connections: list[WebSocket] = []
-        self.users_id_connectiobs: dict[int:WebSocket] = dict()
+        self.users_id_connections: dict[int:WebSocket] = dict()
 
-    async def connect(self, websocket: WebSocket, user_id: int):
+    async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
-        self.users_id_connectiobs[user_id] = websocket
 
-    def disconnect(self, websocket: WebSocket):
+    async def add_user_connection(self, websocket: WebSocket, user_id):
+        self.users_id_connections[user_id] = websocket
+
+    def disconnect(self, websocket: WebSocket, user_id):
         self.active_connections.remove(websocket)
+        self.users_id_connections.pop(user_id, None)
 
     async def send_personal_message(self, message: str, websocket: WebSocket):
         await websocket.send_text(message)
 
-    async def broadcast(self, json_data: dict):
-        for connection in self.active_connections:
-            # await connection.send_text(message)
-            await connection.send_json(json_data)
+    async def broadcast(self, data: dict, recipients: list[WebSocket]):
+        for connection in recipients:
+            await connection.send_json(data)
+            # await connection.send_text(data)
 
 
 manager = ConnectionManager()
 
 
-@websocket_route.websocket(
-    "/ws",
-    # dependencies=[
-        # Depends(websocket_user),
-        # Depends(get_db)
-    # ]
-)
+@websocket_route.websocket("/ws")
 async def websocket_try(
     websocket: WebSocket,
-    session: Annotated[AsyncSession, Depends(get_db)],
-    # user: UserInfo = Depends(websocket_user)
+    token: str = Depends(get_socket_token),
+    session: AsyncSession = Depends(get_db)
 ):
-    user_id = 1
-    # await manager.connect(websocket, user.id)
-    await manager.connect(websocket, user_id)
+    await manager.connect(websocket)
+    user: UserInfo = await websocket_user(token)
+    await manager.add_user_connection(websocket, user.id)
+    print(manager.users_id_connections)
+    # token = websocket.cookies.get("access_token")
     try:
         while True:
-            data = await websocket.receive_text()
-            print(data)
-            # await task_func.create_task(task, session, user)
-            # await websocket.send_text(f"Message text was: {data}")
-            # await manager.broadcast(await project_func.get_projects(user, session))
+            # data = await websocket.receive_text()
+            data_json = await websocket.receive_json()
+            print(data_json)
+            if data_json['action'] == 'upd_pr_detail':
+                project_id = data_json.get('project_id')
+                users_ids_query = await session.execute(
+                    select(ProjectUser.user_id).
+                    where(ProjectUser.project_id == project_id)
+                )
+                users_ids = users_ids_query.scalars().all()
+                broadcast_users = list()
+                for user_id in users_ids:
+                    if user_id in manager.users_id_connections and user_id != user.id:
+                        broadcast_users.append(manager.users_id_connections[user_id])
+                project_model = await project_func.project_details(project_id, session, user)
+                project_json = project_model.model_dump_json()
+                await manager.broadcast(data=project_json, recipients=broadcast_users)
+                # project_list_model = await project_func.get_projects(user, session)
+                # project_list = project_list_model.model_dump()
+                # await manager.broadcast(project_list)
     except WebSocketDisconnect:
-        manager.disconnect(websocket)
-        await manager.broadcast({"answer":"this is the answer"})
+        manager.disconnect(websocket, user.id)
+        print(f"{user.id} disconnect")
+        # await manager.broadcast({"answer":"user disconnented"})

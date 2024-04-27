@@ -6,7 +6,7 @@ from projects.model import CreateProject, EditProject
 from fastapi import status, HTTPException
 import projects.model as my_model
 from datetime import datetime
-
+from database.my_engine import asyns_connection
 
 async def check_link_owner(project_id: int, user_id: int, session: AsyncSession):
     """

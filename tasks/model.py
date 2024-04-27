@@ -5,6 +5,8 @@ from typing import List, Any
 from pydantic import BaseModel, model_validator, Field
 from datetime import datetime, date
 
+from projects.model import ProjectDetails, ProjectList
+
 
 class _Base(BaseModel):
 
@@ -131,6 +133,10 @@ class TaskOrder(_Base):
     task_id: int
     project_id: int
 
+
+class UpdateModelForSocket(_Base):
+    project_details: ProjectDetails | None
+    project_list: ProjectList | None
 
 # class TaskOrder(_Base):
 #     # tasks: List[TaskForOrder]

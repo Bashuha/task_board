@@ -1,13 +1,14 @@
 from sqlalchemy import select
 from database.my_engine import get_db
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status, WebSocketException
 from sqlalchemy.ext.asyncio import AsyncSession
 import tasks.functions as task_func
-from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, DeleteTask, TaskList, ChangeTaskStatus, TaskOrder
+from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, DeleteTask, TaskList, ChangeTaskStatus, TaskOrder, UpdateModelForSocket
 from users.functions import get_current_user, websocket_user, get_socket_token
 from database.schemas import ProjectUser, UserInfo
 import projects.functions as project_func
 import json
+from datetime import datetime
 
 
 router = APIRouter(
@@ -156,7 +157,7 @@ class ConnectionManager:
 
     async def broadcast(self, data: dict, recipients: list[WebSocket]):
         for connection in recipients:
-            await connection.send_json(data)
+            await connection.send_text(data)
             # await connection.send_text(data)
 
 
@@ -176,27 +177,43 @@ async def websocket_try(
     # token = websocket.cookies.get("access_token")
     try:
         while True:
-            # data = await websocket.receive_text()
+            # принимаем json с ключами, который скажут нам что делать
             data_json = await websocket.receive_json()
             print(data_json)
+            # ключи этого объекта скорее всего меняться не будут, только из значения
+            # в зависимости от комад, которые пришлет нам фронт
+            final_object = UpdateModelForSocket(
+                project_details=None,
+                project_list=None
+            )
+            # ключ чтобы обновить детализацию проекта
             if data_json['action'] == 'upd_pr_detail':
+                # нужно сбросить сессию перед каждым запросом, поэтому тут rollback
+                await session.rollback()
                 project_id = data_json.get('project_id')
+                # но обновлять мы будем только у тех пользователей, кто есть в этом проекте
                 users_ids_query = await session.execute(
                     select(ProjectUser.user_id).
                     where(ProjectUser.project_id == project_id)
                 )
                 users_ids = users_ids_query.scalars().all()
                 broadcast_users = list()
+                # этих пользователей мы ищем среди подключенных (и добавляем в список получаетелей)
+                # но отправляем мы всем, кроме себя самого
                 for user_id in users_ids:
                     if user_id in manager.users_id_connections and user_id != user.id:
                         broadcast_users.append(manager.users_id_connections[user_id])
+                # далее просто делаем запрос в базу на нужный нам проект
                 project_model = await project_func.project_details(project_id, session, user)
-                project_json = project_model.model_dump_json()
-                await manager.broadcast(data=project_json, recipients=broadcast_users)
-                # project_list_model = await project_func.get_projects(user, session)
-                # project_list = project_list_model.model_dump()
-                # await manager.broadcast(project_list)
+                final_object.project_details = project_model
+            # ключ обновления списка проктов (bool)
+            if data_json['upd_pr_list']:
+                await session.rollback()
+                project_list_model = await project_func.get_projects(user, session)
+                final_object.project_list = project_list_model
+            
+            final_json = final_object.model_dump_json()
+            await manager.broadcast(data=final_json, recipients=broadcast_users)
     except WebSocketDisconnect:
         manager.disconnect(websocket, user.id)
         print(f"{user.id} disconnect")
-        # await manager.broadcast({"answer":"user disconnented"})

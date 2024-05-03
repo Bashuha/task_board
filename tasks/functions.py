@@ -6,7 +6,7 @@ from tasks.model import CreateTask, EditTask
 from fastapi import HTTPException, status
 import tasks.model as my_model
 from projects.functions import check_user_project
-from tags.functions import change_task_tags
+from tags.functions import change_task_tags, remove_tag_from_task
 
 
 async def get_task_list(session: AsyncSession, user: UserInfo):
@@ -134,9 +134,11 @@ async def edit_task(task: EditTask, session: AsyncSession, user: UserInfo):
         if not new_project_id:
             raise HTTPException(detail="раздел не найден", status_code=status.HTTP_404_NOT_FOUND)
         # если меняется проект, то проверять наличие пользователя в новом проекте
+        # и стирать все теги с этой задачи
         if project_id != new_project_id:
             await check_user_project(new_project_id, user.id, session)
             task_data['project_id'] = new_project_id
+            await remove_tag_from_task(session, task.id)
         
         task_query = await session.execute(
             select(Sections.id, func.count(Task.id).label('task_count')).

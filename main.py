@@ -68,53 +68,7 @@ async def error_handler(request: Request, exc: HTTPException):
     )
 
 
-# class ConnectionManager:
-#     def __init__(self):
-#         self.active_connections: list[WebSocket] = []
-
-#     async def connect(self, websocket: WebSocket):
-#         await websocket.accept()
-#         self.active_connections.append(websocket)
-
-#     def disconnect(self, websocket: WebSocket):
-#         self.active_connections.remove(websocket)
-
-#     async def send_personal_message(self, message: str, websocket: WebSocket):
-#         await websocket.send_text(message)
-
-#     async def broadcast(self, json_data: dict):
-#         for connection in self.active_connections:
-#             await connection.send_text(json_data)
-            # await connection.send_json(json_data)
-
-
-# manager = ConnectionManager()
-# new_router = APIRouter()
-# from typing import Optional
-
-# @new_router.websocket("/ws")
-# async def websocket_try(
-#     # task: CreateTask,
-#     websocket: WebSocket,
-#     prefix: Optional[str] = Query(None)
-#     # session: AsyncSession = Depends(get_db),
-#     # user: UserInfo = Depends(get_current_user)
-# ):
-#     await manager.connect(websocket)
-#     try:
-#         while True:
-#             data = await websocket.receive_text()
-#             # await websocket.send_text(f"Message text was: {data}")
-#             await manager.broadcast(f"New client says: {data}")
-#     except WebSocketDisconnect:
-#         manager.disconnect(websocket)
-#         await manager.broadcast(f"Somebody left the chat")
-
-# app.include_router(new_router)
-
-
 # port 5017
 if __name__ == '__main__':
     app.root_path = '/to_do_list'
-    # uvicorn.run(app, host="127.0.0.1", port=5588)
     uvicorn.run(app, host=API.get('host'), port=API.getint('port'))

@@ -173,7 +173,7 @@ async def websocket_try(
     await manager.connect(websocket)
     user: UserInfo = await websocket_user(token)
     await manager.add_user_connection(websocket, user.id)
-    print(manager.users_id_connections)
+    # print(manager.users_id_connections)
     # token = websocket.cookies.get("access_token")
     try:
         while True:
@@ -216,4 +216,4 @@ async def websocket_try(
             await manager.broadcast(data=final_json, recipients=broadcast_users)
     except WebSocketDisconnect:
         manager.disconnect(websocket, user.id)
-        print(f"{user.id} disconnect")
+        # print(f"{user.id} disconnect")

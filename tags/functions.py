@@ -91,20 +91,11 @@ async def remove_tag_from_task(
     """
     Открепить теги от задачи
     """
-    # value_list = list()
-    # for tag_id in tag_ids:
-    #     tag_values = (tag_id, task_id)
-    #     value_list.append(tag_values)
 
     await session.execute(
         tag_task_link.delete().
         where(tag_task_link.c.task_id == task_id)
     )
-
-    # await session.execute(
-    #     tag_task_link.delete().
-    #     where(tuple_(tag_task_link.c.tag_id, tag_task_link.c.task_id).in_(value_list))
-    # )
 
     await session.commit()
 

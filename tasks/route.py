@@ -179,17 +179,14 @@ async def websocket_try(
         while True:
             # принимаем json с ключами, который скажут нам что делать
             data_json = await websocket.receive_json()
-            print(data_json)
-            # ключи этого объекта скорее всего меняться не будут, только из значения
+            # ключи этого объекта скорее всего меняться не будут, только их значения
             # в зависимости от комад, которые пришлет нам фронт
             final_object = UpdateModelForSocket(
-                project_details=None,
-                project_list=None
+                project_details=data_json.get('upd_pr_detail'),
+                project_list=data_json.get('upd_pr_list')
             )
             # ключ чтобы обновить детализацию проекта
-            if data_json['action'] == 'upd_pr_detail':
-                # нужно сбросить сессию перед каждым запросом, поэтому тут rollback
-                await session.rollback()
+            if data_json.get('upd_pr_detail'):
                 project_id = data_json.get('project_id')
                 # но обновлять мы будем только у тех пользователей, кто есть в этом проекте
                 users_ids_query = await session.execute(
@@ -203,17 +200,8 @@ async def websocket_try(
                 for user_id in users_ids:
                     if user_id in manager.users_id_connections and user_id != user.id:
                         broadcast_users.append(manager.users_id_connections[user_id])
-                # далее просто делаем запрос в базу на нужный нам проект
-                project_model = await project_func.project_details(project_id, session, user)
-                final_object.project_details = project_model
-            # ключ обновления списка проктов (bool)
-            if data_json['upd_pr_list']:
-                await session.rollback()
-                project_list_model = await project_func.get_projects(user, session)
-                final_object.project_list = project_list_model
             
             final_json = final_object.model_dump_json()
             await manager.broadcast(data=final_json, recipients=broadcast_users)
     except WebSocketDisconnect:
         manager.disconnect(websocket, user.id)
-        # print(f"{user.id} disconnect")

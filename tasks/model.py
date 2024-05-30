@@ -135,8 +135,8 @@ class TaskOrder(_Base):
 
 
 class UpdateModelForSocket(_Base):
-    project_details: ProjectDetails | None
-    project_list: ProjectList | None
+    project_details: bool
+    project_list: bool
 
 # class TaskOrder(_Base):
 #     # tasks: List[TaskForOrder]

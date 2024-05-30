@@ -176,52 +176,52 @@ async def init_models():
             "1": {
                 "id": 1,
                 "name": "серый",
-                "color": "#999999"
+                "color": "#C0C0C0"
             },
             "2": {
                 "id": 2,
                 "name": "зелёный",
-                "color": "#369307"
+                "color": "#72A25A"
             },
             "3": {
                 "id": 3,
                 "name": "оранжевый",
-                "color": "#f48318"
+                "color": "#F19A47"
             },
             "4": {
                 "id":4,
                 "name": "красный",
-                "color": "#DC2626"
+                "color": "#E75555"
             },
             "5": {
                 "id":5,
                 "name": "синий",
-                "color": "#1D4ED8"
+                "color": "#567BE2"
             },
             "6": {
                 "id":6,
                 "name": "голубой",
-                "color": "#06B6D4"
+                "color": "#80C9D9"
             },
             "7": {
                 "id":7,
                 "name": "фиолетовый",
-                "color": "#9112BE"
+                "color": "#A873BB"
             },
             "8": {
                 "id":8,
                 "name": "желтый",
-                "color": "#F4D118"
+                "color": "#FBBF24"
             },
             "9": {
                 "id":9,
                 "name": "розовый",
-                "color": "#F02BC5"
+                "color": "#FB82E0"
             },
             "10": {
                 "id":10,
                 "name": "коричневый",
-                "color": "#92400E"
+                "color": "#8F5F41"
             },
         }
         color_ids_query = await session.execute(

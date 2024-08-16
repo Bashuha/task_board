@@ -35,6 +35,7 @@ async def register_user(user_data: user_model.UserResgisetr, session: AsyncSessi
     """
     Создание пользователя в БД
     """
+    # проверяем его наличие
     existing_user = await UsersDAO.find_one_or_none(
         login=user_data.login, session=session
     )
@@ -50,16 +51,21 @@ async def register_user(user_data: user_model.UserResgisetr, session: AsyncSessi
     await UsersDAO.create_user(
         data=user_data.model_dump(exclude={"password"}), session=session
     )
+    # после создания берем его данные для создания проекта "Входящие"
     user_query = await session.execute(
         select(UserInfo).where(UserInfo.login == user_data.login)
     )
     user = user_query.scalar_one_or_none()
-    project = CreateProject(name="Входящие")
-    project_id = await create_project(project, user, session)
-    await session.execute(
-        update(Project).where(Project.id == project_id).values(is_incoming=True)
+    project = CreateProject(
+        name="Входящие",
+        is_incoming=True
     )
-    await session.commit()
+    await create_project(project, user, session)
+    # project_id = await create_project(project, user, session)
+    # await session.execute(
+    #     update(Project).where(Project.id == project_id).values(is_incoming=True)
+    # )
+    # await session.commit()
 
 
 def create_token(data: dict):

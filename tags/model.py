@@ -2,15 +2,13 @@ from __future__ import annotations
 
 from typing import List, Any
 
-from pydantic import BaseModel, model_validator, Field
-from datetime import datetime, date
+from pydantic import BaseModel, ConfigDict, model_validator, Field
 
 
 
 class _Base(BaseModel):
 
-    class Config:
-        from_attributes=True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class CreateTag(_Base):

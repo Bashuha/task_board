@@ -8,6 +8,7 @@ import projects.model as my_model
 from datetime import datetime
 from database.my_engine import asyns_connection
 
+
 async def check_link_owner(project_id: int, user_id: int, session: AsyncSession):
     """
     Проврка, является ли пользователь админом проекта
@@ -301,7 +302,11 @@ async def create_project(project: CreateProject, user: UserInfo, session: AsyncS
     Создание проекта и основного раздела для него
     """
     # сначала создаем проект
-    project_data = Project(name=project.name, owner=user.login)
+    project_data = Project(
+        name=project.name,
+        owner=user.login,
+        is_incoming=project.is_incoming
+    )
     session.add(project_data)
     await session.commit()
     # после чего создаем ему основной раздел

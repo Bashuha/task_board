@@ -11,6 +11,7 @@ class EditComment(BaseModel):
     id: int
     text: str
 
+
 class DeleteComment(BaseModel):
     id: int
     project_id: int

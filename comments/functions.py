@@ -1,51 +1,56 @@
 from sqlalchemy import insert, update, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import CompileError
 from comments.model import CreateComment, DeleteComment, EditComment
 from fastapi import HTTPException, status
 from database.schemas import Comments, Task, UserInfo
 from projects.functions import check_user_project, check_link_owner
     
 
-async def create_comment(comment: CreateComment, session: AsyncSession, user: UserInfo):
+async def create_comment(
+    comment: CreateComment,
+    session: AsyncSession,
+    user: UserInfo
+):
     """
     Создание комента у задачи
     """
-    await check_user_project(comment.project_id, user.id, session)
-    task_query = await session.execute(
-        select(Task.id).
-        where(
-            Task.id == comment.task_id,
-            Task.project_id == comment.project_id
-        )
-    )
-    task_id = task_query.scalar_one_or_none()
-    if not task_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Задача не найдена')
-    
     comment_data = comment.model_dump()
+    await check_user_project(comment_data.pop('project_id'), user.id, session)
     comment_data['login'] = user.login
-    await session.execute(
-        insert(Comments).
-        values(comment_data)
-    )
-    await session.commit()
+    try:
+        await session.execute(
+            insert(Comments).
+            values(comment_data)
+        )
+        await session.commit()
+    except CompileError as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='ошибка создания комментария')
 
 
-async def edit_comment(comment: EditComment, session: AsyncSession, user: UserInfo):
+async def edit_comment(
+    comment: EditComment,
+    session: AsyncSession,
+    user: UserInfo
+):
     """
     Редактирование своего комента
     """
-    comment_data = comment.model_dump(exclude={'id'})
-    await session.execute(
-        update(Comments).
-        where(
-            Comments.id == comment.id,
-            Comments.login == user.login
-        ).
-        values(comment_data)
-    )
-    await session.commit()
-
+    try:
+        await session.execute(
+            update(Comments).
+            where(
+                Comments.id == comment.id,
+                Comments.login == user.login
+            ).
+            values(text=comment.text)
+        )
+        await session.commit()
+    except CompileError as e:
+        print(e)
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='ошибка редактирования комментария')
+    
 
 async def delete_comment(
     comment_model: DeleteComment,

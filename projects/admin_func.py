@@ -107,10 +107,9 @@ async def remove_user_from_project(
         )
         exist_users = exist_users_query.scalars().all()
         # если нет, то вешаем все задачи на админа (единственного пользователя)
+        new_executor = None
         if not exist_users:
             new_executor = user.id
-        else:
-            new_executor = None
             
         await session.execute(
             update(Task).

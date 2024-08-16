@@ -1,14 +1,11 @@
 from sqlalchemy import select
 from database.my_engine import get_db
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status, WebSocketException
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import tasks.functions as task_func
 from tasks.model import Task, CreateTask, EditTask, ErrorNotFound, DeleteTask, TaskList, ChangeTaskStatus, TaskOrder, UpdateModelForSocket
 from users.functions import get_current_user, websocket_user, get_socket_token
 from database.schemas import ProjectUser, UserInfo
-import projects.functions as project_func
-import json
-from datetime import datetime
 
 
 router = APIRouter(

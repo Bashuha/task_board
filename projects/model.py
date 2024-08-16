@@ -1,12 +1,11 @@
-from pydantic import BaseModel, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from typing import List, Any
 from datetime import date, datetime
 
 
 class _Base(BaseModel):
 
-    class Config:
-        from_attributes=True
+    model_config = ConfigDict(from_attributes=True)
 
 
 class UserInfo(_Base):
@@ -89,6 +88,7 @@ class TodayTaskList(_Base):
 class CreateProject(_Base):
     name: str
     is_favorites: bool = False
+    is_incoming: bool = False
 
 
 class SectionForCreate(_Base):

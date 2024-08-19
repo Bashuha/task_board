@@ -153,7 +153,7 @@ def get_token(request: Request, response: Response):
 
 async def get_current_user(
     token: str = Depends(get_token)
-):
+) -> user_model.GetUser:
     """
     Проверка пользователя (залогинен или нет)
     """

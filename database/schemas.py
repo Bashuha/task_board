@@ -11,7 +11,6 @@ from sqlalchemy.dialects.mysql import (
 )
 from sqlalchemy.orm import relationship, DeclarativeBase, Mapped
 from database.my_engine import engine
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 class Base(DeclarativeBase):
@@ -21,8 +20,8 @@ class Base(DeclarativeBase):
 tag_task_link = Table(
     'task_tag',
     Base.metadata,
-    Column('tag_id', ForeignKey('tag.id'), primary_key=True),
-    Column('task_id', ForeignKey('Task.id'), primary_key=True)
+    Column('tag_id', ForeignKey('tag.id', ondelete='cascade'), primary_key=True),
+    Column('task_id', ForeignKey('Task.id', ondelete='cascade'), primary_key=True)
 )
 
 
@@ -37,7 +36,6 @@ class User(Base):
 
     user_addition: Mapped[UserInfo] = relationship(
         back_populates='user',
-        # cascade='all, delete',
     )
 
 
@@ -72,15 +70,6 @@ class Project(Base):
     # date = Column(DATETIME(timezone=True), server_default=func.now())
     is_incoming = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
-    # owner = Column(
-    #     VARCHAR(50),
-    #     ForeignKey(
-    #         User.login,
-    #         # ondelete='cascade',
-    #         onupdate='cascade'
-    #     ),
-    #     nullable=False
-    # )
 
     tasks: Mapped[list[Task]] = relationship(back_populates="project")
     sections: Mapped[list[Sections]] = relationship(back_populates='project')
@@ -120,10 +109,10 @@ class Task(Base):
     owner_id = Column(INTEGER(), ForeignKey(UserInfo.id), nullable=True)
     executor_id = Column(INTEGER(), ForeignKey(UserInfo.id), nullable=True)
     task_giver_id = Column(INTEGER(), ForeignKey(UserInfo.id), nullable=True)
-    project_id = Column(INTEGER(), ForeignKey(Project.id))
+    project_id = Column(ForeignKey(Project.id, ondelete='cascade'))
     create_date = Column(TIMESTAMP(timezone=True), server_default=func.now())
     # create_date = Column(DATETIME(timezone=True), server_default=func.now())
-    section_id = Column(INTEGER(), ForeignKey(Sections.id))
+    section_id = Column(ForeignKey(Sections.id, ondelete='cascade'))
     status = Column(BOOLEAN(), server_default="1")
     order_number = Column(INTEGER(), nullable=False)
     to_do_date = Column(DATE(), nullable=True)
@@ -145,11 +134,11 @@ class Comments(Base):
 
     id = Column(INTEGER(), primary_key=True)
     # переделать привязку комментария к пользователю, сменить на user_id
-    login = Column(VARCHAR(255), nullable=False)
+    user_id = Column(ForeignKey(UserInfo.id, ondelete='set null'), nullable=True)
     text = Column(VARCHAR(1024), nullable=False)
     # create_at = Column(DATETIME(timezone=True), server_default=func.now())
     create_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    task_id = Column(INTEGER(), ForeignKey(Task.id), nullable=True)
+    task_id = Column(ForeignKey(Task.id, ondelete='cascade'), nullable=False)
 
     task: Mapped[Task] = relationship(back_populates='comments')
 
@@ -157,8 +146,22 @@ class Comments(Base):
 class ProjectUser(Base):
     __tablename__ = 'project_user'
 
-    project_id = Column(ForeignKey(Project.id), primary_key=True, nullable=False)
-    user_id = Column(ForeignKey(UserInfo.id), primary_key=True, nullable=False)
+    project_id = Column(
+        ForeignKey(
+            Project.id,
+            ondelete='cascade'
+        ),
+        primary_key=True,
+        nullable=False
+    )
+    user_id = Column(
+        ForeignKey(
+            UserInfo.id,
+            ondelete='cascade'
+        ),
+        primary_key=True,
+        nullable=False
+    )
     is_favorites = Column(BOOLEAN(), nullable=False, server_default="0")
     is_owner = Column(BOOLEAN(), nullable=False, server_default="0")
 
@@ -179,7 +182,13 @@ class Tag(Base):
 
     id = Column(INTEGER(), primary_key=True, autoincrement=True)
     name = Column(VARCHAR(255), nullable=False)
-    project_id = Column(ForeignKey(Project.id), nullable=False)
+    project_id = Column(
+        ForeignKey(
+            Project.id,
+            ondelete='cascade'
+        ),
+        nullable=False
+    )
     color_id = Column(ForeignKey(TagColor.id), nullable=False, server_default="1")
 
     color_info: Mapped[TagColor] = relationship()

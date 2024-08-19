@@ -39,6 +39,13 @@ class TestRegister(test_data.UserRegister):
             result = query.scalar_one_or_none()
             assert result == test_data.UserRegister.test_login
 
+            query = await session.execute(
+                select(db_schema.UserInfo.id).
+                where(db_schema.UserInfo.login == test_data.UserRegister.test_login)
+            )
+            result = query.scalar_one_or_none()
+            assert result is not None
+
 
 @pytest.mark.asyncio(scope="session")
 class TestLogin(test_data.UserLogin):

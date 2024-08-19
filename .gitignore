@@ -1,0 +1,10 @@
+venv
+settings.ini
+__pycache__
+*.pid
+.vscode
+main_test.py
+logs
+main_socket.py
+*.toml
+.pytest_cache

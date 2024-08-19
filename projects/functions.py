@@ -6,7 +6,6 @@ from projects.model import CreateProject, EditProject
 from fastapi import status, HTTPException
 import projects.model as my_model
 from datetime import datetime
-from database.my_engine import asyns_connection
 
 
 async def check_link_owner(project_id: int, user_id: int, session: AsyncSession):
@@ -19,8 +18,8 @@ async def check_link_owner(project_id: int, user_id: int, session: AsyncSession)
         where(ProjectUser.user_id == user_id).
         where(ProjectUser.is_owner == True)
     )
-    project_model = project_query.scalar_one_or_none()
-    return project_model
+    project_id_from_db = project_query.scalar_one_or_none()
+    return project_id_from_db
 
 
 async def get_projects(user: UserInfo, session: AsyncSession):
@@ -304,7 +303,6 @@ async def create_project(project: CreateProject, user: UserInfo, session: AsyncS
     # сначала создаем проект
     project_data = Project(
         name=project.name,
-        owner=user.login,
         is_incoming=project.is_incoming
     )
     session.add(project_data)
@@ -363,7 +361,6 @@ async def exit_project(project_id: int, session: AsyncSession, user: UserInfo):
     # для начала проверим, является ли пользователь админом
     check_root = await check_link_owner(project_id, user.id, session)
     del_trigger = True
-    executor_trigger = True
     # потом проверим есть ли в проекте админы помимо него
     check_admin_query = await session.execute(
         select(ProjectUser.user_id).
@@ -396,7 +393,14 @@ async def exit_project(project_id: int, session: AsyncSession, user: UserInfo):
                     where(Task.project_id == project_id).
                     values(executor_id=new_admin_id)
                 )
-                executor_trigger = False
+            # в противном случае везде, где он был исполнитель теперь будет NULL
+            else:
+                await session.execute(
+                    update(Task).
+                    where(Task.executor_id == user.id).
+                    where(Task.project_id == project_id).
+                    values(executor_id=None)    
+                )
         # ну а если больше пользователей не осталось, то мы удаляем проект
         else:
             await session.execute(
@@ -406,18 +410,10 @@ async def exit_project(project_id: int, session: AsyncSession, user: UserInfo):
             del_trigger = False
         await session.commit()
     # если проект еще не удалился, то мы удаляем связь пользователя и проекта
-    # а также удаляем исполнителя во всех задачах где он был
     if del_trigger:
         await session.execute(
             delete(ProjectUser).
             where(ProjectUser.project_id == project_id).
             where(ProjectUser.user_id == user.id)
         )
-    if executor_trigger:
-        await session.execute(
-            update(Task).
-            where(Task.executor_id == user.id).
-            where(Task.project_id == project_id).
-            values(executor_id=None)    
-        )
-    await session.commit()
+        await session.commit()

@@ -106,9 +106,27 @@ class Task(Base):
     id = Column(INTEGER(), primary_key=True)
     name = Column(VARCHAR(255), nullable=False)
     description = Column(TEXT(), nullable=False)
-    owner_id = Column(INTEGER(), ForeignKey(UserInfo.id), nullable=True)
-    executor_id = Column(INTEGER(), ForeignKey(UserInfo.id), nullable=True)
-    task_giver_id = Column(INTEGER(), ForeignKey(UserInfo.id), nullable=True)
+    owner_id = Column(
+        ForeignKey(
+            UserInfo.id,
+            ondelete='set null'
+        ),
+        nullable=True
+    )
+    executor_id = Column(
+        ForeignKey(
+            UserInfo.id,
+            ondelete='set null'
+        ),
+        nullable=True
+    )
+    task_giver_id = Column(
+        ForeignKey(
+            UserInfo.id,
+            ondelete='set null'
+        ),
+        nullable=True
+    )
     project_id = Column(ForeignKey(Project.id, ondelete='cascade'))
     create_date = Column(TIMESTAMP(timezone=True), server_default=func.now())
     # create_date = Column(DATETIME(timezone=True), server_default=func.now())

@@ -47,6 +47,7 @@ class TestRegister(test_data.UserRegister):
             assert result is not None
 
 
+access_token = None
 @pytest.mark.asyncio(scope="session")
 class TestLogin(test_data.UserLogin):
 
@@ -64,29 +65,51 @@ class TestLogin(test_data.UserLogin):
             "/auth/login",
             json=body
         )
+        # global access_token = response.cookies['access_token']
         assert response.status_code == status_code
 
-    async def test_delete(self):
-        async with asyns_connection() as session:
-            query = await session.execute(
-                delete(db_schema.User).
-                where(db_schema.User.login == self.login)
-            )
-            await session.commit()
+    # async def test_delete(self):
+    #     async with asyns_connection() as session:
+    #         query = await session.execute(
+    #             delete(db_schema.User).
+    #             where(db_schema.User.login == self.login)
+    #         )
+    #         await session.commit()
 
-            query = await session.execute(
-                select(db_schema.User.login).
-                where(db_schema.User.login == self.login)
-            )
-            result = query.scalar_one_or_none()
-            assert result is None
+    #         query = await session.execute(
+    #             select(db_schema.User.login).
+    #             where(db_schema.User.login == self.login)
+    #         )
+    #         result = query.scalar_one_or_none()
+    #         assert result is None
 
-            query = await session.execute(
-                select(db_schema.UserInfo.id).
-                where(db_schema.UserInfo.login == self.login)
-            )
-            result = query.scalar_one_or_none()
-            assert result is None
+    #         query = await session.execute(
+    #             select(db_schema.UserInfo.id).
+    #             where(db_schema.UserInfo.login == self.login)
+    #         )
+    #         result = query.scalar_one_or_none()
+    #         assert result is None
+
+
+@pytest.mark.asyncio(scope="session")
+class TestDelete(test_data.UserDelete):
+
+    @pytest.mark.parametrize(
+        "status_code",
+        [(200)]
+        # test_data.UserDelete.test_data
+    )
+    async def test_delete(
+        self,
+        ac: AsyncClient,
+        # body,
+        status_code,
+    ):
+        response = await ac.delete(
+            "/delete_user",
+            # json=body
+        )
+        assert response.status_code == status_code
 
 # @pytest.mark.asyncio(scope="session")
 # class TestLogin:

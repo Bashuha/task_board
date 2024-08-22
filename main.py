@@ -16,6 +16,7 @@ from sections.route import router as section_router
 from comments.route import router as comment_router
 from users.auth import router as user_router
 from tags.route import router as tag_router
+from profiles.route import router as profile_router
 
 
 @asynccontextmanager
@@ -58,6 +59,7 @@ app.include_router(task_router)
 app.include_router(section_router)
 app.include_router(comment_router)
 app.include_router(tag_router)
+app.include_router(profile_router)
 
 
 @app.exception_handler(HTTPException)

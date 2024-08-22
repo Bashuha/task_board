@@ -31,9 +31,6 @@ class UserDelete:
     test_login = 'first'
     test_data = [
         (
-            {
-                "login": f"{test_login}",
-            },
             200
         )
     ]

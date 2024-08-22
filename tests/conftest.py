@@ -13,7 +13,7 @@ import asyncio
 
 
 engine_test = create_async_engine(
-    f'postgresql+asyncpg://{TEST_DB.get("user")}:{TEST_DB.get("password")}@{TEST_DB.get("host")}:{TEST_DB.get("port")}/{TEST_DB.get("database")}',
+    f'mysql+asyncmy://{TEST_DB.get("user")}:{TEST_DB.get("password")}@{TEST_DB.get("host")}/{TEST_DB.get("database")}',
     echo=TEST_DB.get('echo'),
     pool_recycle=3600,
     poolclass=NullPool

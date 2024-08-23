@@ -87,7 +87,7 @@ class CreateTask(_Base):
     to_do_date: date | None = None
     executor_id: int | None = None
     section_id: int
-    tag_ids: List[int] | None = None
+    tag_ids: List[int]
 
 
 class EditTask(_Base):

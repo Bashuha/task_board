@@ -105,7 +105,7 @@ class Task(Base):
 
     id = Column(INTEGER(), primary_key=True)
     name = Column(VARCHAR(255), nullable=False)
-    description = Column(TEXT(), nullable=False)
+    description = Column(TEXT(), nullable=True)
     owner_id = Column(
         ForeignKey(
             UserInfo.id,

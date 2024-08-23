@@ -17,7 +17,7 @@ async def create_comment(
     """
     comment_data = comment.model_dump()
     await check_user_project(comment_data.pop('project_id'), user.id, session)
-    comment_data['login'] = user.login
+    comment_data['user_id'] = user.id
     try:
         await session.execute(
             insert(Comments).

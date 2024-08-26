@@ -55,15 +55,16 @@ async def edit_profile(
     user: UserInfo
 ):
     user_data = profile_model.model_dump(exclude_unset=True)
-    if not user_data:
-        return
-    if new_login := user_data.get('email'):
+    if user_data.get('email'):
         await session.execute(
             update(User).
             where(User.login == user.login).
-            values(login=new_login)
+            values(login=user_data.pop('email'))
         )
         await session.commit()
+
+    if not user_data:
+        return
     else:
         await session.execute(
             update(UserInfo).

@@ -37,7 +37,8 @@ async def register_user(user_data: user_model.UserResgisetr, session: AsyncSessi
     """
     # проверяем его наличие
     existing_user = await UsersDAO.find_one_or_none(
-        login=user_data.login, session=session
+        session=session,
+        arg={"login": user_data.login},
     )
     if existing_user:
         raise HTTPException(
@@ -45,17 +46,25 @@ async def register_user(user_data: user_model.UserResgisetr, session: AsyncSessi
             detail="такой пользователь уже существует",
         )
     hashed_password = get_password_hash(user_data.password)
-    await UsersDAO.insert_data(
-        login=user_data.login, password=hashed_password, session=session
-    )
+    user_dict = user_data.model_dump()
+    user_dict['password'] = hashed_password
+    # await UsersDAO.insert_data(
+        # login=user_data.login, password=hashed_password, session=session
+    # )
     await UsersDAO.create_user(
-        data=user_data.model_dump(exclude={"password"}), session=session
+        data=user_dict,
+        session=session,
     )
     # после создания берем его данные для создания проекта "Входящие"
-    user_query = await session.execute(
-        select(UserInfo).where(UserInfo.login == user_data.login)
+    # user_query = await session.execute(
+        # select(UserInfo).where(UserInfo.login == user_data.login)
+    # )
+    # user = user_query.scalar_one_or_none()
+    # после создания берем его данные для создания проекта "Входящие"
+    user = await UsersDAO.find_one_or_none(
+        session=session,
+        arg={"login": user_data.login},
     )
-    user = user_query.scalar_one_or_none()
     project = CreateProject(
         name="Входящие",
         is_incoming=True
@@ -111,15 +120,18 @@ def update_token(user_id, login, response: Response):
 
 
 async def login_user(
-    response: Response, user_data: user_model.UserLogin, session: AsyncSession
+    response: Response,
+    user_data: user_model.UserLogin,
+    session: AsyncSession,
 ):
     """
     Аутентификация пользователя в системе
     """    
-    user = await UsersDAO.check_user(arg=user_data.login, session=session)
+    user = await UsersDAO.check_user(login=user_data.login, session=session)
     if not user or not verify_password(user_data.password, user.password):
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="введены неверные данные"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="введены неверные данные",
         )
     user_info = await UsersDAO.find_by_id(session=session, arg=user.id)
     update_token(user_id=str(user.id), login=user.login, response=response)

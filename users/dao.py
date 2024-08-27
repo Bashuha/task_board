@@ -15,7 +15,7 @@ class UsersDAO(BaseDAO):
         return result.scalar_one_or_none()
     
     @classmethod
-    async def check_user(cls, session: AsyncSession, arg):
+    async def check_user(cls, session: AsyncSession, login):
         query = await session.execute(
             select(
                 cls.schema.login,
@@ -23,12 +23,17 @@ class UsersDAO(BaseDAO):
                 cls.info_chema.id,
             ).
             join(cls.info_chema).
-            where(cls.schema.login == arg))
+            where(cls.schema.login == login))
         result = query.one_or_none()
         return result
     
     @classmethod
-    async def create_user(cls, session: AsyncSession, data):
+    async def create_user(cls, session: AsyncSession, data: dict):
+        user = {
+            "login": data["login"],
+            "password": data.pop('password')
+        }
+        await cls.insert_data(session, user)
         await session.execute(
             insert(cls.info_chema).
             values(**data)

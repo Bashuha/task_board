@@ -3,6 +3,8 @@ from sqlalchemy import insert, update, select, delete, func, or_
 from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 import profiles.model as profile_model
+from users.dao import UsersDAO
+from users.functions import verify_password
 from fastapi import status, HTTPException
 from datetime import datetime
 
@@ -54,6 +56,10 @@ async def edit_profile(
     profile_model: profile_model.EditProfile,
     user: UserInfo
 ):
+    """
+    Изменяет Фамилию Имя пользователя
+    Изменяет почту пользователя (изменить, когда сделаем верификацию)
+    """
     user_data = profile_model.model_dump(exclude_unset=True)
     if user_data.get('email'):
         await session.execute(
@@ -72,3 +78,19 @@ async def edit_profile(
             values(user_data)
         )
         await session.commit()
+
+
+async def change_password(
+    model: profile_model.UserChangePass,
+    session: AsyncSession,
+    user: UserInfo,
+):
+    """
+    Меняет пароль пользователю
+    """
+    user_data = UsersDAO.check_user(
+        session,
+        user.login
+    )
+    
+    ...

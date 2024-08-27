@@ -23,7 +23,7 @@ class UserInfo(_Base):
 class Comment(_Base):
     create_at: datetime
     id: int
-    login: str
+    user_id: int
     text: str
 
 

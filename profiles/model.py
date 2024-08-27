@@ -17,4 +17,5 @@ class UserChangeEmail(_Base):
 
 
 class UserChangePass(_Base):
-    ...
+    old_pass: str
+    new_pass: str

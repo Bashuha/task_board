@@ -37,3 +37,16 @@ async def edit_profile(
     user: UserInfo = Depends(get_current_user)
 ):
     return await profile_func.edit_profile(session, profile_model, user)
+
+
+@router.put(
+    '/change_pass',
+    status_code=status.HTTP_200_OK,
+    summary="смена пароля пользователя"
+)
+async def change_password(
+    pass_model: profile_model.UserChangePass,
+    session: AsyncSession = Depends(get_db),
+    user: UserInfo = Depends(get_current_user)
+):
+    return await profile_func.change_password(session, pass_model, user)

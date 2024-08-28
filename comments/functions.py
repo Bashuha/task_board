@@ -1,10 +1,11 @@
-from sqlalchemy import insert, update, delete, select
+from sqlalchemy import insert, update, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.exc import CompileError
 from comments.model import CreateComment, DeleteComment, EditComment
 from fastapi import HTTPException, status
-from database.schemas import Comments, Task, UserInfo
+from database.schemas import Comments, UserInfo
 from projects.functions import check_user_project, check_link_owner
+from comments.dao import CommentDAO
     
 
 async def create_comment(
@@ -19,14 +20,12 @@ async def create_comment(
     await check_user_project(comment_data.pop('project_id'), user.id, session)
     comment_data['user_id'] = user.id
     try:
-        await session.execute(
-            insert(Comments).
-            values(comment_data)
+        await CommentDAO.insert_data(
+            session=session,
+            data=comment_data,
         )
-        await session.commit()
     except CompileError as e:
-        print(e)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='ошибка создания комментария')
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'{e}')
 
 
 async def edit_comment(
@@ -38,18 +37,16 @@ async def edit_comment(
     Редактирование своего комента
     """
     try:
-        await session.execute(
-            update(Comments).
-            where(
-                Comments.id == comment.id,
-                Comments.login == user.login
-            ).
-            values(text=comment.text)
+        await CommentDAO.update_data(
+            session=session,
+            filters={
+                "id": comment.id,
+                "user_id": user.id,
+            },
+            values={'text': comment.text}
         )
-        await session.commit()
     except CompileError as e:
-        print(e)
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail='ошибка редактирования комментария')
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=f'{e}')
     
 
 async def delete_comment(
@@ -61,33 +58,19 @@ async def delete_comment(
     Удаление комментария
     Удалять коменты может либо автор комментария либо админ проекта
     """
-    # если пользователь админ и такая задача существует, то комент можно удалить
+    # если пользователь админ то комент можно удалить
     check_root = await check_link_owner(comment_model.project_id, user.id, session)
-    check_task_query = await session.execute(
-        select(Task.id).
-        where(
-            Task.id == comment_model.task_id,
-            Task.project_id == comment_model.project_id
+    if check_root:
+        await CommentDAO.delete_data(
+            session=session,
+            filters={'id': comment_model.id}
         )
-    )
-    task_id = check_task_query.scalar_one_or_none()
-    if not task_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='задача не найдена')
-    if check_root and task_id:
-        await session.execute(
-            delete(Comments).
-            where(
-                Comments.id == comment_model.id,
-                Comments.task_id == task_id,
-            )
+    # если пользователь не админ, но автор, то комент удалится
+    else:
+        await CommentDAO.delete_data(
+            session=session,
+            filters={
+                "id": comment_model.id,
+                "user_id": user.id,
+            }
         )
-    # если пользователь не админ, но автор и задача существует, то комент удалится
-    elif task_id:
-        await session.execute(
-            delete(Comments).
-            where(
-                Comments.id == comment_model.id,
-                Comments.login == user.login
-            )
-        )
-    await session.commit()

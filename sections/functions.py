@@ -4,6 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sections.model import CreateSection, EditSection, SectionOrder, DeleteSection
 from fastapi import HTTPException, status
 from database.schemas import Project, Sections, UserInfo
+from sections.dao import SectionDAO
 
 
 async def create_section(section: CreateSection, session: AsyncSession, user: UserInfo):
@@ -19,13 +20,14 @@ async def create_section(section: CreateSection, session: AsyncSession, user: Us
         )
         project = project_query.one_or_none()
         if not project:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='Проект не найден')
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail='проект не найден')
         
         section_data = section.model_dump()
         section_data['order_number'] = project.section_count + 1
-        stmt = insert(Sections).values(section_data)
-        await session.execute(stmt)
-        await session.commit()
+        await SectionDAO.insert_data(
+            session=session,
+            data=section_data,
+        )
 
 
 async def edit_section(section: EditSection, session: AsyncSession, user: UserInfo):
@@ -35,13 +37,14 @@ async def edit_section(section: EditSection, session: AsyncSession, user: UserIn
     check_root = await check_link_owner(section.project_id, user.id, session)
     if check_root:
         section_data = section.model_dump(exclude={'id'})
-        await session.execute(
-            update(Sections).
-            where(Sections.id == section.id).
-            where(Sections.is_basic == False).
-            values(section_data)
+        await SectionDAO.update_data(
+            session=session,
+            filters={
+                "id": section.id,
+                "is_basic": False,
+            },
+            values=section_data,
         )
-        await session.commit()
 
 
 async def delete_section(section: DeleteSection, session: AsyncSession, user: UserInfo):
@@ -50,12 +53,13 @@ async def delete_section(section: DeleteSection, session: AsyncSession, user: Us
     """
     check_root = await check_link_owner(section.project_id, user.id, session)
     if check_root:
-        await session.execute(
-            delete(Sections).
-            where(Sections.id == section.id).
-            where(Sections.is_basic == False)
+        await SectionDAO.delete_data(
+            session=session,
+            filters={
+                "id": section.id,
+                "is_basic": False,
+            }
         )
-        await session.commit()
 
 
 async def change_section_order(section_order: SectionOrder, session: AsyncSession, user: UserInfo):

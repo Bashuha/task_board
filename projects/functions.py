@@ -6,6 +6,9 @@ from projects.model import CreateProject, EditProject
 from fastapi import status, HTTPException
 import projects.model as my_model
 from datetime import datetime
+from projects.dao import ProjectDAO, ProjectUserDAO
+from sections.dao import SectionDAO
+from tasks.dao import TaskDAO
 
 
 async def check_link_owner(project_id: int, user_id: int, session: AsyncSession):
@@ -296,33 +299,33 @@ async def project_details(project_id: int | None, session: AsyncSession, user: U
     return project_object
 
 
-async def create_project(project: CreateProject, user: UserInfo, session: AsyncSession):
+async def create_project(project_data: CreateProject, user_id: int, session: AsyncSession):
     """
     Создание проекта и основного раздела для него
     """
     # сначала создаем проект
-    project_data = Project(
-        name=project.name,
-        is_incoming=project.is_incoming
+    project_id = await ProjectDAO.insert_data(
+        session=session,
+        data=project_data.model_dump(exclude={'is_favorites'})
     )
-    session.add(project_data)
-    await session.commit()
     # после чего создаем ему основной раздел
-    section_data = my_model.SectionForCreate(project_id=project_data.id)
-    section_dict = section_data.model_dump()
-    session.add(Sections(**section_dict))
-    await session.commit()
-    await session.execute(
-        insert(ProjectUser).
-        values(
-            project_id=project_data.id,
-            user_id=user.id,
-            is_favorites=project.is_favorites,
-            is_owner=True,
-        )
+    section_data = my_model.SectionForCreate(project_id=project_id)
+    await SectionDAO.insert_data(
+        session=session,
+        data=section_data.model_dump()
     )
-    await session.commit()
-    return project_data.id
+    # потом создаем связь пользователя и проекта
+    project_user_dict = {
+        "project_id": project_id,
+        "user_id": user_id,
+        "is_favorites": project_data.is_favorites,
+        "is_owner": True,
+    }
+    await ProjectUserDAO.insert_data(
+        session=session,
+        data=project_user_dict
+    )
+    return project_id
 
 
 async def edit_project(project: EditProject, session: AsyncSession, user: UserInfo):
@@ -332,23 +335,28 @@ async def edit_project(project: EditProject, session: AsyncSession, user: UserIn
     """
     update_project_data = project.model_dump(exclude={'id'}, exclude_unset=True)
     if update_project_data.get('is_favorites') is not None:
-        await session.execute(
-            update(ProjectUser).
-            where(ProjectUser.user_id == user.id).
-            where(ProjectUser.project_id == project.id).
-            values(is_favorites=update_project_data.pop('is_favorites'))
+        await ProjectUserDAO.update_data(
+            session=session,
+            filters={
+                "user_id": user.id,
+                "project_id": project.id
+            },
+            values={
+                "is_favorites": update_project_data.pop("is_favorites")
+            }
         )
     if update_project_data:
-        project_model = await check_link_owner(project.id, user.id, session)
+        check_root = await check_link_owner(project.id, user.id, session)
 
-        if project_model:
-            await session.execute(
-                update(Project).
-                where(Project.id == project.id).
-                where(Project.is_incoming == False).
-                values(update_project_data)
+        if check_root:
+            await ProjectDAO.update_data(
+                session=session,
+                filters={
+                    "id": project.id,
+                    "is_incoming": False
+                },
+                values=update_project_data
             )
-    await session.commit()
 
 
 async def exit_project(project_id: int, session: AsyncSession, user: UserInfo):
@@ -380,40 +388,44 @@ async def exit_project(project_id: int, session: AsyncSession, user: UserInfo):
         # если там пользователи еще есть, то отдаем права админа первому в списке
         if exist_users:
             new_admin_id = exist_users[0]
-            await session.execute(
-                update(ProjectUser).
-                where(ProjectUser.project_id == project_id).
-                where(ProjectUser.user_id == new_admin_id).
-                values(is_owner=True)    
+            await ProjectUserDAO.update_data(
+                session=session,
+                filters={
+                    "project_id": project_id,
+                    "user_id": new_admin_id,
+                },
+                values={"is_owner": True}
             )
             # если остался всего один пользователь, то вешаем на него все задачи проекта
             if len(exist_users) == 1:
-                await session.execute(
-                    update(Task).
-                    where(Task.project_id == project_id).
-                    values(executor_id=new_admin_id)
+                await TaskDAO.update_data(
+                    session=session,
+                    filters={"project_id": project_id},
+                    values={"executor_id": new_admin_id}
                 )
             # в противном случае везде, где он был исполнитель теперь будет NULL
             else:
-                await session.execute(
-                    update(Task).
-                    where(Task.executor_id == user.id).
-                    where(Task.project_id == project_id).
-                    values(executor_id=None)    
+                await TaskDAO.update_data(
+                    session=session,
+                    filters={
+                        "project_id": project_id,
+                        "executor_id": user.id,
+                    },
+                    values={"executor_id": None}
                 )
         # ну а если больше пользователей не осталось, то мы удаляем проект
         else:
-            await session.execute(
-                delete(Project).
-                where(Project.id == project_id)
+            await ProjectDAO.delete_data(
+                session=session,
+                filters={"id": project_id}
             )
             del_trigger = False
-        await session.commit()
     # если проект еще не удалился, то мы удаляем связь пользователя и проекта
     if del_trigger:
-        await session.execute(
-            delete(ProjectUser).
-            where(ProjectUser.project_id == project_id).
-            where(ProjectUser.user_id == user.id)
+        await ProjectUserDAO.delete_data(
+            session=session,
+            filters={
+                "project_id": project_id,
+                "user_id": user.id,
+            }
         )
-        await session.commit()

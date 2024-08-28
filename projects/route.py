@@ -1,6 +1,6 @@
 from database.my_engine import get_db
 from database.schemas import UserInfo
-from fastapi import APIRouter, Depends, WebSocketDisconnect, status, WebSocket, WebSocketException
+from fastapi import APIRouter, Depends, status
 from sqlalchemy.ext.asyncio import AsyncSession
 import projects.functions as project_func
 import projects.admin_func as admin_func
@@ -16,7 +16,6 @@ from projects.model import (
     ProjectUserList
 )
 from users.functions import get_current_user
-from fastapi.responses import HTMLResponse
 
 
 router = APIRouter(tags=["Projects"])
@@ -60,7 +59,7 @@ async def create_project(
     session: AsyncSession = Depends(get_db),
     user: UserInfo = Depends(get_current_user)
 ):
-    return await project_func.create_project(project, user, session)
+    return await project_func.create_project(project, user.id, session)
 
 
 @router.patch(

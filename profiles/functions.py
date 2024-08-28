@@ -1,12 +1,11 @@
 from database.schemas import Project, User, UserInfo, ProjectUser
 from sqlalchemy import insert, update, select, delete, func, or_
-from sqlalchemy.orm import joinedload, load_only
 from sqlalchemy.ext.asyncio import AsyncSession
 import profiles.model as profile_model
-from users.dao import UsersDAO
-from users.functions import verify_password
+from users.dao import UsersDAO, UsersDAOInfo
+from projects.dao import ProjectDAO
+from users.functions import verify_password, get_password_hash
 from fastapi import status, HTTPException
-from datetime import datetime
 
 
 async def delete_user_from_system(user: UserInfo, session: AsyncSession):
@@ -44,11 +43,10 @@ async def delete_user_from_system(user: UserInfo, session: AsyncSession):
         )
         await session.commit()
     # удаляем пользователя
-    await session.execute(
-        delete(User).
-        where(User.login == user.login)
+    await UsersDAO.delete_data(
+        session=session,
+        filters={"login": user.login}
     )
-    await session.commit()
 
 
 async def edit_profile(
@@ -62,35 +60,40 @@ async def edit_profile(
     """
     user_data = profile_model.model_dump(exclude_unset=True)
     if user_data.get('email'):
-        await session.execute(
-            update(User).
-            where(User.login == user.login).
-            values(login=user_data.pop('email'))
+        await UsersDAO.update_data(
+            session=session,
+            filters={"login": user.login},
+            values={"login": user_data.pop('email')}
         )
-        await session.commit()
 
     if not user_data:
         return
     else:
-        await session.execute(
-            update(UserInfo).
-            where(UserInfo.id == user.id).
-            values(user_data)
+        await UsersDAOInfo.update_data(
+            session=session,
+            filters={"id": user.id},
+            values=user_data
         )
-        await session.commit()
 
 
 async def change_password(
-    model: profile_model.UserChangePass,
     session: AsyncSession,
+    pass_model: profile_model.UserChangePass,
     user: UserInfo,
 ):
     """
     Меняет пароль пользователю
     """
-    user_data = UsersDAO.check_user(
-        session,
-        user.login
+    user_data: User = await UsersDAO.find_one_or_none(
+        session=session,
+        filters={"login": user.login},
     )
-    
-    ...
+    check_old_pass = verify_password(pass_model.old_pass, user_data.password)
+    if not check_old_pass:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="неправильный пароль")
+    hashed_password = get_password_hash(pass_model.new_pass)
+    await UsersDAO.update_data(
+        session=session,
+        filters={"login": user.login},
+        values={"password": hashed_password}
+    )

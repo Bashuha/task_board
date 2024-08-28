@@ -1,13 +1,11 @@
 import users.model as user_model
-from users.dao import UsersDAO
+from users.dao import UsersDAO, UsersDAOInfo
 from fastapi import HTTPException
 from passlib.context import CryptContext
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, update
 from jose import jwt, JWTError
 from database.schemas import UserInfo, Project
 from database.config import JWT
-from database.my_engine import get_db
 from datetime import datetime, timedelta, timezone
 from fastapi import Request, Response, status, HTTPException, Depends, WebSocket
 from projects.model import CreateProject
@@ -17,11 +15,11 @@ from projects.functions import create_project
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 
-def verify_password(plain_password, hashed_password):
+def verify_password(incoming_password, db_password) -> bool:
     """
     Проверка валидности пароля
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    return pwd_context.verify(incoming_password, db_password)
 
 
 def get_password_hash(password):
@@ -38,7 +36,7 @@ async def register_user(user_data: user_model.UserResgisetr, session: AsyncSessi
     # проверяем его наличие
     existing_user = await UsersDAO.find_one_or_none(
         session=session,
-        arg={"login": user_data.login},
+        filters={"login": user_data.login},
     )
     if existing_user:
         raise HTTPException(
@@ -48,33 +46,16 @@ async def register_user(user_data: user_model.UserResgisetr, session: AsyncSessi
     hashed_password = get_password_hash(user_data.password)
     user_dict = user_data.model_dump()
     user_dict['password'] = hashed_password
-    # await UsersDAO.insert_data(
-        # login=user_data.login, password=hashed_password, session=session
-    # )
-    await UsersDAO.create_user(
+    user_id = await UsersDAO.create_user(
         data=user_dict,
         session=session,
     )
-    # после создания берем его данные для создания проекта "Входящие"
-    # user_query = await session.execute(
-        # select(UserInfo).where(UserInfo.login == user_data.login)
-    # )
-    # user = user_query.scalar_one_or_none()
-    # после создания берем его данные для создания проекта "Входящие"
-    user = await UsersDAO.find_one_or_none(
-        session=session,
-        arg={"login": user_data.login},
-    )
+    # после создания пользователя, создаем ему проект "Входящие"
     project = CreateProject(
         name="Входящие",
         is_incoming=True
     )
-    await create_project(project, user, session)
-    # project_id = await create_project(project, user, session)
-    # await session.execute(
-    #     update(Project).where(Project.id == project_id).values(is_incoming=True)
-    # )
-    # await session.commit()
+    await create_project(project, user_id, session)
 
 
 def create_token(data: dict):
@@ -101,7 +82,10 @@ def update_token(user_id, login, response: Response):
         minutes=10
     )
     response.set_cookie(
-        "access_token", access_token, expires=expire_access, httponly=True
+        "access_token",
+        access_token,
+        expires=expire_access,
+        httponly=True,
     )
 
     refresh_token = create_token(
@@ -113,7 +97,10 @@ def update_token(user_id, login, response: Response):
     )
     expire_refresh = datetime.now(timezone(timedelta(hours=3)).utc) + timedelta(days=30)
     response.set_cookie(
-        "refresh_token", refresh_token, expires=expire_refresh, httponly=True
+        "refresh_token",
+        refresh_token,
+        expires=expire_refresh,
+        httponly=True,
     )
 
     return access_token
@@ -123,19 +110,31 @@ async def login_user(
     response: Response,
     user_data: user_model.UserLogin,
     session: AsyncSession,
-):
+) -> user_model.UserInfo:
     """
     Аутентификация пользователя в системе
     """    
-    user = await UsersDAO.check_user(login=user_data.login, session=session)
+    # проверяем его наличие в системе
+    user = await UsersDAO.find_one_or_none(
+        session=session,
+        filters={'login':user_data.login},
+    )
+    # проверяем валидность введенных данных
     if not user or not verify_password(user_data.password, user.password):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="введены неверные данные",
         )
-    user_info = await UsersDAO.find_by_id(session=session, arg=user.id)
-    update_token(user_id=str(user.id), login=user.login, response=response)
-
+    # берем инфу для создания токена (важно брать именно из UserInfo)
+    user_info: UserInfo = await UsersDAOInfo.find_one_or_none(
+        session=session,
+        filters={'login':user_data.login}
+    )
+    update_token(
+        user_id=str(user_info.id),
+        login=user_info.login,
+        response=response,
+    )
     return user_model.UserInfo.model_validate(user_info)
 
 
@@ -152,8 +151,9 @@ def get_token(request: Request, response: Response):
             payload = jwt.decode(refresh_token, JWT.get("secret"), JWT.get("algoritm"))
         except JWTError as e:
             raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"{e}"
-        )
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"{e}",
+            )
         access_token = update_token(
             user_id=payload.get("sub"),
             login=payload.get("login"),
@@ -173,11 +173,13 @@ async def get_current_user(
         payload = jwt.decode(token, JWT.get("secret"), JWT.get("algoritm"))
     except JWTError as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"{e}"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"{e}",
         )
     if payload.get("type") != "access":
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="не тот токен"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="не тот токен",
         )
     user = user_model.GetUser(id=payload.get("sub"), login=payload.get("login"))
     return user
@@ -193,10 +195,15 @@ def get_socket_token(request: WebSocket, response: Response):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
     if not access_token and refresh_token:
         try:
-            payload = jwt.decode(refresh_token, JWT.get("secret"), JWT.get("algoritm"))
+            payload = jwt.decode(
+                refresh_token,
+                JWT.get("secret"),
+                JWT.get("algoritm")
+            )
         except JWTError as e:
             raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED, detail=f"{e}"
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail=f"{e}",
             )
         access_token = update_token(
             user_id=payload.get("sub"),
@@ -209,7 +216,7 @@ def get_socket_token(request: WebSocket, response: Response):
 
 async def websocket_user(
     token: str = Depends(get_socket_token)
-):
+) -> user_model.GetUser:
     """
     Проверка пользователя (залогинен или нет)
     """
@@ -217,11 +224,13 @@ async def websocket_user(
         payload = jwt.decode(token, JWT.get("secret"), JWT.get("algoritm"))
     except JWTError as e:
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail=f"{e}"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail=f"{e}",
         )
     if payload.get("type") != "access":
         raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="не тот токен"
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="не тот токен",
         )
     user = user_model.GetUser(id=payload.get("sub"), login=payload.get("login"))
     return user

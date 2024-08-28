@@ -19,6 +19,15 @@ class UserRegister:
                 "second_name": "string"
             },
             201
+        ),
+        (
+            {
+                "login": "second",
+                "password": "string",
+                "first_name": "string",
+                "second_name": "string"
+            },
+            400
         )
     ]
 
@@ -66,6 +75,19 @@ class UserCreateProj:
             {
                 "name": "first_proj",
             }
+        )
+    ]
+
+
+class UpdateProject:
+    test_data = [
+        (
+            {
+                "id": 3,
+                "name": "new name",
+                "is_favorites": True,
+            },
+            200
         )
     ]
 

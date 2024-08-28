@@ -124,6 +124,44 @@ class TestAddUserToProj:
     
 
 @pytest.mark.asyncio(scope="session")
+class TestUpdateProject:
+    @pytest.mark.parametrize(
+        "body, status_code",
+        test_data.UpdateProject.test_data
+    )
+    async def test_update_project(
+        self,
+        ac: AsyncClient,
+        body,
+        status_code,
+    ):
+        response = await ac.patch(
+            "/project",
+            json=body
+        )
+        assert response.status_code == status_code
+        async with asyns_connection() as session:
+            session: AsyncSession
+            # берем id пользователя
+            query = await session.execute(
+                select(db_schema.Project.name).
+                where(db_schema.Project.id == 3)
+            )
+            proj_name = query.scalar_one_or_none()
+            assert proj_name == "new name"
+
+            query = await session.execute(
+                select(db_schema.ProjectUser.is_favorites).
+                where(
+                    db_schema.ProjectUser.project_id == 3,
+                    db_schema.ProjectUser.user_id == 1
+                )
+            )
+            is_favorites = query.scalar_one_or_none()
+            assert is_favorites == True
+
+
+@pytest.mark.asyncio(scope="session")
 class TestCreateTask:
     @pytest.mark.parametrize(
         "body, status_code",

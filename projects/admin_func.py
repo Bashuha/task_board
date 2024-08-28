@@ -6,6 +6,8 @@ from projects.model import ChangeArchiveStatus
 from fastapi import status, HTTPException
 import projects.model as my_model
 from projects.functions import check_link_owner, check_user_project
+from projects.dao import ProjectUserDAO, ProjectDAO
+from tasks.dao import TaskDAO
 
 
 async def delete_from_archive(project_id: int, session: AsyncSession, user: UserInfo):
@@ -14,13 +16,14 @@ async def delete_from_archive(project_id: int, session: AsyncSession, user: User
     """
     project_model = await check_link_owner(project_id, user.id, session)
     if project_model:
-        await session.execute(
-            delete(Project).
-            where(Project.id == project_id).
-            where(Project.is_archive == True).
-            where(Project.is_incoming == False)
+        await ProjectDAO.delete_data(
+            session=session,
+            filters={
+                "id": project_id,
+                "is_archive": True,
+                "is_incoming": False,
+            }
         )
-        await session.commit()
 
 
 async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSession, user: UserInfo):
@@ -29,18 +32,19 @@ async def change_archive_status(project: ChangeArchiveStatus, session: AsyncSess
     """
     project_model = await check_link_owner(project.id, user.id, session)
     if project_model:
-        await session.execute(
-            update(Project).
-            where(Project.id == project.id).
-            where(Project.is_incoming == False).
-            values(is_archive=project.is_archive)
+        await ProjectDAO.update_data(
+            session=session,
+            filters={
+                "id": project.id,
+                "is_incoming": False,
+            },
+            values={'is_archive': project.is_archive}
         )
-        await session.execute(
-            update(ProjectUser).
-            where(ProjectUser.project_id == project.id).
-            values(is_favorites=False)
+        await ProjectUserDAO.update_data(
+            session=session,
+            filters={"project_id": project.id},
+            values={"is_favorites": False},
         )
-        await session.commit()
 
 
 async def add_user_to_project(
@@ -53,29 +57,27 @@ async def add_user_to_project(
     Добавление пользователя в проект
     добавить можно только зарегестрированного пользователя (пока что)
     """
+    # может ли текущий пользователь добавлять кого-то в проект
+    check_root = await check_link_owner(project_id, user.id, session)
     # берем id пользователя, которого хотим добавить в проект
     user_id_query = await session.execute(
         select(UserInfo.id).
         where(UserInfo.login == login)
     )
     user_id = user_id_query.scalar_one_or_none()
-    # далее проверяем есть ли такая связка в таблице
-    # может ли текущий пользователь добавлять кого-то в проект
-    check_root = await check_link_owner(project_id, user.id, session)
-    if user_id and check_root:
+    if not user_id:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="пользователь не найден")
+    if check_root:
         try:
-            await session.execute(
-                insert(ProjectUser).
-                values(
-                    user_id=user_id,
-                    project_id=project_id
-                )
+            await ProjectUserDAO.insert_data(
+                session=session,
+                data={
+                    "user_id": user_id,
+                    "project_id": project_id,
+                }
             )
-            await session.commit()
         except IntegrityError:
             raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="пользователь уже в проекте")
-    elif not user_id:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="пользователь не найден") 
         
 
 async def remove_user_from_project(
@@ -94,10 +96,12 @@ async def remove_user_from_project(
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="неприемлемое действие")
     if check_root:
         # удаляем связку проект-пользователь
-        await session.execute(
-            delete(ProjectUser).
-            where(ProjectUser.project_id == project_id).
-            where(ProjectUser.user_id == user_id)
+        await ProjectUserDAO.delete_data(
+            session=session,
+            filters={
+                "project_id": project_id,
+                "user_id": user_id,
+            }
         )
         # проверим есть ли еще пользователи в проекте помимо админа
         exist_users_query = await session.execute(
@@ -111,13 +115,14 @@ async def remove_user_from_project(
         if not exist_users:
             new_executor = user.id
             
-        await session.execute(
-            update(Task).
-            where(Task.executor_id == user_id).
-            where(Task.project_id == project_id).
-            values(executor_id=new_executor)    
+        await TaskDAO.update_data(
+            session=session,
+            filters={
+                "executor_id": user_id,
+                "project_id": project_id,
+            },
+            values={'executor_id': new_executor}
         )
-        await session.commit()
 
 
 async def project_user_list(project_id: int, user: UserInfo, session: AsyncSession):
@@ -165,10 +170,11 @@ async def change_admin(
     if user_id == user.id:
         raise HTTPException(status_code=status.HTTP_406_NOT_ACCEPTABLE, detail="неприемлемое действие")
     if check_root:
-        await session.execute(
-            update(ProjectUser).
-            where(ProjectUser.project_id == project_id).
-            where(ProjectUser.user_id == user_id).
-            values(is_owner=is_owner)
+        await ProjectUserDAO.update_data(
+            session=session,
+            filters={
+                "project_id": project_id,
+                "user_id": user_id,
+            },
+            values={"is_owner": is_owner}
         )
-        await session.commit()

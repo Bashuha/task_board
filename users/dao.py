@@ -6,26 +6,6 @@ from sqlalchemy import select, insert
 
 class UsersDAO(BaseDAO):
     schema = User
-    info_chema = UserInfo
-
-    @classmethod
-    async def find_by_id(cls, session: AsyncSession, arg):
-        query = select(cls.info_chema).filter_by(id=arg)
-        result = await session.execute(query)
-        return result.scalar_one_or_none()
-    
-    @classmethod
-    async def check_user(cls, session: AsyncSession, login):
-        query = await session.execute(
-            select(
-                cls.schema.login,
-                cls.schema.password,
-                cls.info_chema.id,
-            ).
-            join(cls.info_chema).
-            where(cls.schema.login == login))
-        result = query.one_or_none()
-        return result
     
     @classmethod
     async def create_user(cls, session: AsyncSession, data: dict):
@@ -34,8 +14,14 @@ class UsersDAO(BaseDAO):
             "password": data.pop('password')
         }
         await cls.insert_data(session, user)
-        await session.execute(
-            insert(cls.info_chema).
+        query = await session.execute(
+            insert(UserInfo).
             values(**data)
         )
         await session.commit()
+        user_id = query.lastrowid
+        return user_id
+
+
+class UsersDAOInfo(BaseDAO):
+    schema = UserInfo

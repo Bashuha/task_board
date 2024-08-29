@@ -5,7 +5,7 @@ from database.config import MYSQL
 
 engine = create_async_engine(
     f'mysql+asyncmy://{MYSQL.get("user")}:{MYSQL.get("password")}@localhost/{MYSQL.get("database")}',
-    echo=MYSQL.getboolean('echo'),
+    echo=MYSQL.get('echo'),
     pool_recycle=3600
 )
 

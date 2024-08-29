@@ -3,7 +3,6 @@ from sqlalchemy import Column, ForeignKey, Table, select, insert, func
 from sqlalchemy.dialects.mysql import (
     INTEGER,
     VARCHAR,
-    DATETIME,
     TIMESTAMP,
     BOOLEAN,
     TEXT,
@@ -31,7 +30,6 @@ class User(Base):
     login = Column(VARCHAR(50), primary_key=True)
     password = Column(VARCHAR(255), nullable=False)
     is_active = Column(BOOLEAN(), nullable=False, server_default='1')
-    # date_create = Column(DATETIME(timezone=True), server_default=func.now())
     date_create = Column(TIMESTAMP(timezone=True), server_default=func.now())
 
     user_addition: Mapped[UserInfo] = relationship(
@@ -55,7 +53,6 @@ class UserInfo(Base):
     second_name = Column(VARCHAR(100), nullable=False)
 
     user: Mapped[User] = relationship(
-        # cascade='all, delete-orphan',
         back_populates='user_addition',
         single_parent=True,
     )
@@ -67,7 +64,6 @@ class Project(Base):
     id = Column(INTEGER(), primary_key=True)
     name = Column(VARCHAR(150), nullable=False)
     date = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    # date = Column(DATETIME(timezone=True), server_default=func.now())
     is_incoming = Column(BOOLEAN(), server_default="0")
     is_archive = Column(BOOLEAN(), server_default="0")
 
@@ -129,7 +125,6 @@ class Task(Base):
     )
     project_id = Column(ForeignKey(Project.id, ondelete='cascade'))
     create_date = Column(TIMESTAMP(timezone=True), server_default=func.now())
-    # create_date = Column(DATETIME(timezone=True), server_default=func.now())
     section_id = Column(ForeignKey(Sections.id, ondelete='cascade'))
     status = Column(BOOLEAN(), server_default="1")
     order_number = Column(INTEGER(), nullable=False)
@@ -151,10 +146,8 @@ class Comments(Base):
     __tablename__ = "Comments"
 
     id = Column(INTEGER(), primary_key=True)
-    # переделать привязку комментария к пользователю, сменить на user_id
     user_id = Column(ForeignKey(UserInfo.id, ondelete='set null'), nullable=True)
     text = Column(VARCHAR(1024), nullable=False)
-    # create_at = Column(DATETIME(timezone=True), server_default=func.now())
     create_at = Column(TIMESTAMP(timezone=True), server_default=func.now())
     task_id = Column(ForeignKey(Task.id, ondelete='cascade'), nullable=False)
 

@@ -6,5 +6,7 @@ __pycache__
 main_test.py
 logs
 main_socket.py
-*.toml
+settings.toml
+test_settings.toml
 .pytest_cache
+versions

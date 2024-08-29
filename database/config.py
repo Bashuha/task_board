@@ -2,12 +2,14 @@ from configparser import ConfigParser
 import toml
 
 
-config_with_global = ConfigParser()
-config_with_global.read('settings.ini')
-cuurent_config = toml.load('test_settings.toml')
+# config_with_global = ConfigParser()
+# config_with_global.read('settings.ini')
+
+# cuurent_config = toml.load('test_settings.toml')
+cuurent_config = toml.load('settings.toml')
 
 
-API = config_with_global['API']
-MYSQL = config_with_global['MYSQL']
-JWT = config_with_global['JWT']
+API = cuurent_config['API']
+MYSQL = cuurent_config['MYSQL']
+JWT = cuurent_config['JWT']
 TEST_DB = cuurent_config['TEST_DB']

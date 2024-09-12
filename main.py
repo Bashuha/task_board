@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     )
     handler.setFormatter(logging.Formatter("%(asctime)s - %(levelname)s - %(message)s"))
     logger.addHandler(handler)
-    # await init_models()
+    await init_models()
     yield
 
 
